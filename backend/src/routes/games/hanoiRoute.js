@@ -1,8 +1,7 @@
 const router = require("express").Router();
 
-// Temp test route
 router.get("/test", (req, res) => {
-  res.json({ message: "Snake & Ladder API working" });
+  res.json({ message: "Route working" });
 });
 
 module.exports = router;
