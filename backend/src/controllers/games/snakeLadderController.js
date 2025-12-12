@@ -1,6 +1,6 @@
 const Success = require("../../utils/successResponse");
 const ErrorResponse = require("../../utils/errorHandler");
-const GameResult = require("../../models/gameResultsModel");
+const GameResult = require("../../models/gameResultModel");
 const service = require("../../services/games/snakeLadderService");
 
 // START GAME
@@ -39,20 +39,30 @@ exports.startGame = async (req, res, next) => {
 // SUBMIT ANSWER
 exports.submitAnswer = async (req, res, next) => {
   try {
-    const { playerName, selectedOption, correctAnswer, algoTimes, boardSize } =
+    const { playerId, playerName, selectedOption, correctAnswer, algoTimes, boardSize } =
       req.body;
+
+    if (!playerId) {
+      return next(new ErrorResponse("Player ID is required", 400));
+    }
 
     const isCorrect = selectedOption == correctAnswer;
 
     await GameResult.create({
-      game: "snakeladder",
+      playerId,
       playerName,
-      selectedOption,
-      correctAnswer,
+      gameType: "snakeLadder",
+      score: isCorrect ? 1 : 0,
       isCorrect,
-      algo1Time: algoTimes.bfs,
-      algo2Time: algoTimes.biBfs,
-      boardSize
+      gameData: {
+        selectedOption,
+        correctAnswer,
+        boardSize
+      },
+      algorithmTimes: {
+        bfs: algoTimes.bfs,
+        biBfs: algoTimes.biBfs
+      }
     });
 
     return Success(res, {
@@ -66,9 +76,11 @@ exports.submitAnswer = async (req, res, next) => {
 // LEADERBOARD
 exports.getLeaderboard = async (req, res, next) => {
   try {
-    const results = await GameResult.find({ game: "snakeladder", isCorrect: true })
+    const results = await GameResult.find({ gameType: "snakeLadder", isCorrect: true })
       .sort({ createdAt: -1 })
-      .limit(10);
+      .limit(10)
+      .populate("playerId", "name")
+      .lean();
 
     return Success(res, results);
   } catch (err) {
