@@ -2,47 +2,36 @@ import { useEffect, useState } from "react";
 import GameMenu from "./components/GameMenu";
 import LoginSignup from "./components/LoginSignup";
 import QueensPage from "./pages/QueensPage";
-import TowerOfHanoi from "./pages/TowerOfHanoi";
+import TrafficPage from "./pages/TrafficPage";
+import TspPage from "./pages/TspPage";
 import "./App.css";
-import SnakeLadderPage from "./pages/SnakeLadderPage";
 
 function App() {
   const [hash, setHash] = useState(
     typeof window !== "undefined" ? window.location.hash : ""
   );
-  const [player, setPlayer] = useState(null);
-  const [currentGame, setCurrentGame] = useState(null);
 
-  useEffect(() => {
-    // Check for stored player data
+  // Use lazy initialization to read from localStorage without effect
+  const [player, setPlayer] = useState(() => {
+    if (typeof window === "undefined") return null;
     const storedPlayer = localStorage.getItem("player");
     if (storedPlayer) {
       try {
-        setPlayer(JSON.parse(storedPlayer));
+        return JSON.parse(storedPlayer);
+        // eslint-disable-next-line no-unused-vars
       } catch (e) {
         localStorage.removeItem("player");
+        return null;
       }
     }
-  }, []);
+    return null;
+  });
+
+  const [currentGame, setCurrentGame] = useState(null);
 
   useEffect(() => {
-    const onHashChange = () => {
-      const newHash = window.location.hash;
-      setHash(newHash);
-      // Sync currentGame with hash
-      if (newHash === "#/queens") {
-        setCurrentGame("queens");
-      } else if (newHash === "#/hanoi") {
-        setCurrentGame("hanoi");
-      } else if (newHash === "#/snake-ladder") {
-        setCurrentGame("snakeLadder");
-      } else if (newHash === "" || newHash === "#") {
-        setCurrentGame(null);
-      }
-    };
+    const onHashChange = () => setHash(window.location.hash);
     window.addEventListener("hashchange", onHashChange);
-    // Also check initial hash
-    onHashChange();
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
@@ -65,10 +54,10 @@ function App() {
     setCurrentGame(gameType);
     if (gameType === "queens") {
       window.location.hash = "#/queens";
-    } else if (gameType === "hanoi") {
-      window.location.hash = "#/hanoi";
-    } else if (gameType === "snakeLadder") {
-      window.location.hash = "#/snake-ladder";
+    } else if (gameType === "traffic") {
+      window.location.hash = "#/traffic";
+    } else if (gameType === "tsp") {
+      window.location.hash = "#/tsp";
     }
   };
 
@@ -84,29 +73,15 @@ function App() {
 
   // Show game based on route or current game
   if (hash === "#/queens" || currentGame === "queens") {
-    return (
-      <QueensPage 
-        player={player} 
-        onBack={handleBackToMenu}
-      />
-    );
-  }
-  if (hash === "#/snake-ladder" || currentGame === "snakeLadder") {
-    return (
-      <SnakeLadderPage 
-        player={player} 
-        onBack={handleBackToMenu}
-      />
-    );
+    return <QueensPage player={player} onBack={handleBackToMenu} />;
   }
 
-  if (hash === "#/hanoi" || currentGame === "hanoi") {
-    return (
-      <TowerOfHanoi 
-        player={player} 
-        onBack={handleBackToMenu}
-      />
-    );
+  if (hash === "#/traffic" || currentGame === "traffic") {
+    return <TrafficPage player={player} onBack={handleBackToMenu} />;
+  }
+
+  if (hash === "#/tsp" || currentGame === "tsp") {
+    return <TspPage player={player} onBack={handleBackToMenu} />;
   }
 
   // Show game menu
