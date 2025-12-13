@@ -68,4 +68,6 @@ const gameResultSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now },
 });
 
-module.exports = mongoose.model("GameResult", gameResultSchema);
+// Use a different model name to avoid conflict with the unified gameResultModel
+// Prevent model overwrite error during hot reloading
+module.exports = mongoose.models.HanoiGameResult || mongoose.model("HanoiGameResult", gameResultSchema);

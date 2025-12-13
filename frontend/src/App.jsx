@@ -3,6 +3,7 @@ import GameMenu from "./components/GameMenu";
 import LoginSignup from "./components/LoginSignup";
 import QueensPage from "./pages/QueensPage";
 import "./App.css";
+import SnakeLadderPage from "./pages/SnakeLadderPage";
 
 function App() {
   const [hash, setHash] = useState(
@@ -65,6 +66,14 @@ function App() {
   if (hash === "#/queens" || currentGame === "queens") {
     return (
       <QueensPage 
+        player={player} 
+        onBack={handleBackToMenu}
+      />
+    );
+  }
+  if (hash === "#/snake-ladder" || currentGame === "snakeLadder") {
+    return (
+      <SnakeLadderPage 
         player={player} 
         onBack={handleBackToMenu}
       />

@@ -5,7 +5,7 @@ export default function GameMenu({ onGameSelect }) {
   const games = [
     { 
       id: 1, 
-      name: "Snake & Ladder", 
+      name: "Snake and Ladder Game Problem", 
       description: "Find minimum dice throws to reach the end",
       color: "linear-gradient(135deg, #FF6B8B 0%, #FFA500 100%)",
       icon: "🎲",
@@ -99,8 +99,8 @@ export default function GameMenu({ onGameSelect }) {
               onMouseLeave={() => setHoveredCard(null)}
               onClick={(e) => {
                 e.stopPropagation();
-                if (isQueens && onGameSelect) {
-                  onGameSelect("queens");
+                if (onGameSelect) {
+                  onGameSelect(game.gameType);
                 } else if (isQueens) {
                   window.location.hash = target;
                 }
@@ -135,8 +135,8 @@ export default function GameMenu({ onGameSelect }) {
                     style={styles.playButton}
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (isQueens && onGameSelect) {
-                        onGameSelect("queens");
+                      if (onGameSelect) {
+                        onGameSelect(game.gameType);
                       } else if (isQueens) {
                         window.location.hash = target;
                       }

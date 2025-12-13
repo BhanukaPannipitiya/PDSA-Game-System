@@ -3,8 +3,12 @@ const { performance } = require("perf_hooks");
 class SnakeLadderService {
 
   generateBoard(N) {
-    const totalCells = N * N;
+    // Validation
+    if (!N || N < 6 || N > 12) {
+      throw new Error("Board size must be between 6 and 12");
+    }
 
+    const totalCells = N * N;
     const snakes = {};
     const ladders = {};
 
@@ -12,29 +16,54 @@ class SnakeLadderService {
     let ladderCount = N - 2;
 
     const used = new Set();
+    const maxAttempts = 1000; // Prevent infinite loops
 
-    // Generate Ladders
-    while (Object.keys(ladders).length < ladderCount) {
-      let start = Math.floor(Math.random() * (totalCells - 1)) + 2;
+    // Generate Ladders (must go up: start < end)
+    let ladderAttempts = 0;
+    while (Object.keys(ladders).length < ladderCount && ladderAttempts < maxAttempts) {
+      ladderAttempts++;
+      
+      // Start from cell 2 to totalCells-1 (can't start at 1 or end at totalCells)
+      let start = Math.floor(Math.random() * (totalCells - 2)) + 2;
+      // End must be after start and before totalCells
       let end = Math.floor(Math.random() * (totalCells - start)) + start + 1;
 
-      if (!used.has(start) && !used.has(end)) {
+      // Ensure end doesn't exceed totalCells
+      if (end >= totalCells) continue;
+
+      if (!used.has(start) && !used.has(end) && start < end) {
         ladders[start] = end;
         used.add(start);
         used.add(end);
       }
     }
 
-    // Generate Snakes
-    while (Object.keys(snakes).length < snakeCount) {
-      let start = Math.floor(Math.random() * (totalCells - 1)) + 2;
-      let end = Math.floor(Math.random() * (start - 1)) + 1;
+    // Generate Snakes (must go down: start > end)
+    let snakeAttempts = 0;
+    while (Object.keys(snakes).length < snakeCount && snakeAttempts < maxAttempts) {
+      snakeAttempts++;
+      
+      // Start from cell 2 to totalCells-1
+      let start = Math.floor(Math.random() * (totalCells - 2)) + 2;
+      // End must be before start and after 1
+      let end = Math.floor(Math.random() * (start - 2)) + 2;
 
-      if (end !== 1 && !used.has(start) && !used.has(end)) {
+      if (end >= start || end === 1) continue;
+
+      if (!used.has(start) && !used.has(end) && start > end) {
         snakes[start] = end;
         used.add(start);
         used.add(end);
       }
+    }
+
+    // Validate we got the required number
+    if (Object.keys(ladders).length < ladderCount) {
+      throw new Error(`Failed to generate ${ladderCount} ladders. Generated ${Object.keys(ladders).length}`);
+    }
+
+    if (Object.keys(snakes).length < snakeCount) {
+      throw new Error(`Failed to generate ${snakeCount} snakes. Generated ${Object.keys(snakes).length}`);
     }
 
     return { snakes, ladders };
@@ -71,35 +100,74 @@ class SnakeLadderService {
 
   // Bidirectional BFS
   biBfs(minBoard, totalCells) {
-    let startSet = new Set([1]);
-    let endSet = new Set([totalCells]);
-    let visited = new Set();
+    if (1 === totalCells) return 0;
+
+    // Build adjacency list in reverse: for each cell, which cells can reach it
+    const canReach = {};
+    for (let i = 1; i <= totalCells; i++) {
+      canReach[i] = [];
+    }
+
+    // For each position, find all positions that can reach it
+    for (let from = 1; from < totalCells; from++) {
+      for (let dice = 1; dice <= 6; dice++) {
+        let to = from + dice;
+        if (to > totalCells) break;
+        let finalTo = minBoard[to] || to;
+        if (finalTo !== from && !canReach[finalTo].includes(from)) {
+          canReach[finalTo].push(from);
+        }
+      }
+    }
+
+    let forwardQueue = [1];
+    let backwardQueue = [totalCells];
+    let forwardVisited = new Set([1]);
+    let backwardVisited = new Set([totalCells]);
+    let forwardDist = { 1: 0 };
+    let backwardDist = { [totalCells]: 0 };
     let moves = 0;
 
-    while (startSet.size && endSet.size) {
-      moves++;
-      let temp = new Set();
-
-      for (let pos of startSet) {
+    while (forwardQueue.length > 0 && backwardQueue.length > 0) {
+      // Expand forward
+      let nextForwardQueue = [];
+      for (let pos of forwardQueue) {
         for (let dice = 1; dice <= 6; dice++) {
           let next = pos + dice;
-          if (next > totalCells) continue;
+          if (next > totalCells) break;
+          let finalPos = minBoard[next] || next;
 
-          if (minBoard[next]) next = minBoard[next];
+          if (backwardVisited.has(finalPos)) {
+            return forwardDist[pos] + 1 + backwardDist[finalPos];
+          }
 
-          if (endSet.has(next)) return moves;
-
-          if (!visited.has(next)) {
-            visited.add(next);
-            temp.add(next);
+          if (!forwardVisited.has(finalPos)) {
+            forwardVisited.add(finalPos);
+            forwardDist[finalPos] = forwardDist[pos] + 1;
+            nextForwardQueue.push(finalPos);
           }
         }
       }
-      startSet = temp;
-      if (startSet.size > endSet.size) {
-        [startSet, endSet] = [endSet, startSet];
+      forwardQueue = nextForwardQueue;
+
+      // Expand backward
+      let nextBackwardQueue = [];
+      for (let pos of backwardQueue) {
+        for (let prev of canReach[pos] || []) {
+          if (forwardVisited.has(prev)) {
+            return forwardDist[prev] + backwardDist[pos] + 1;
+          }
+
+          if (!backwardVisited.has(prev)) {
+            backwardVisited.add(prev);
+            backwardDist[prev] = backwardDist[pos] + 1;
+            nextBackwardQueue.push(prev);
+          }
+        }
       }
+      backwardQueue = nextBackwardQueue;
     }
+
     return -1;
   }
 

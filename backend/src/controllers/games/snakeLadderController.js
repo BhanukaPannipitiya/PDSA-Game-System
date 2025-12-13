@@ -8,31 +8,80 @@ exports.startGame = async (req, res, next) => {
   try {
     const { boardSize } = req.body;
 
-    if (!boardSize || boardSize < 6 || boardSize > 12) {
+    // Validation: Check if boardSize is provided
+    if (boardSize === undefined || boardSize === null) {
+      return next(new ErrorResponse("Board size is required", 400));
+    }
+
+    // Validation: Check if boardSize is a number
+    const size = parseInt(boardSize);
+    if (isNaN(size)) {
+      return next(new ErrorResponse("Board size must be a number", 400));
+    }
+
+    // Validation: Check if boardSize is within valid range
+    if (size < 6 || size > 12) {
       return next(new ErrorResponse("Board size must be between 6 and 12", 400));
     }
 
-    const { snakes, ladders } = service.generateBoard(boardSize);
-    const result = service.solveBoard(snakes, ladders, boardSize);
+    // Generate board with snakes and ladders
+    const { snakes, ladders } = service.generateBoard(size);
+    
+    // Validate board generation
+    if (!snakes || !ladders) {
+      return next(new ErrorResponse("Failed to generate game board", 500));
+    }
 
-    // Generate MCQ options
+    // Solve the board using algorithms
+    const result = service.solveBoard(snakes, ladders, size);
+
+    // Validate solution
+    if (result.bfs === -1 || result.biBfs === -1) {
+      return next(new ErrorResponse("No solution found for this board configuration", 500));
+    }
+
+    // Generate MCQ options - ensure all are positive and different
     const correct = result.bfs;
-    const option2 = correct + Math.floor(Math.random() * 3) + 1;
-    const option3 = correct - Math.floor(Math.random() * 3) + 1;
+    let option2, option3;
+    
+    // Generate valid options
+    do {
+      option2 = correct + Math.floor(Math.random() * 5) + 1;
+    } while (option2 === correct || option2 <= 0);
+
+    do {
+      option3 = Math.max(1, correct - Math.floor(Math.random() * 5) - 1);
+    } while (option3 === correct || option3 === option2 || option3 <= 0);
+
+    // Ensure all options are unique
+    const options = [correct, option2, option3];
+    const uniqueOptions = [...new Set(options)];
+    
+    // If we lost an option due to duplicates, add a new one
+    while (uniqueOptions.length < 3) {
+      const newOption = correct + Math.floor(Math.random() * 10) + 1;
+      if (!uniqueOptions.includes(newOption) && newOption > 0) {
+        uniqueOptions.push(newOption);
+      }
+    }
+
+    // Shuffle options
+    const shuffledOptions = uniqueOptions.sort(() => Math.random() - 0.5);
 
     return Success(res, {
       snakes,
       ladders,
       correctAnswer: correct,
-      options: [correct, option2, option3].sort(() => Math.random() - 0.5),
+      options: shuffledOptions,
       algoTimes: {
-        bfs: result.bfsTime,
-        biBfs: result.biTime
+        bfs: parseFloat(result.bfsTime.toFixed(4)),
+        biBfs: parseFloat(result.biTime.toFixed(4))
       },
-      boardSize
+      boardSize: size
     });
   } catch (err) {
-    next(err);
+    console.error("Error in startGame:", err);
+    next(new ErrorResponse("Internal server error while starting game", 500));
   }
 };
 
@@ -42,34 +91,89 @@ exports.submitAnswer = async (req, res, next) => {
     const { playerId, playerName, selectedOption, correctAnswer, algoTimes, boardSize } =
       req.body;
 
+    // Validation: Check required fields
     if (!playerId) {
       return next(new ErrorResponse("Player ID is required", 400));
     }
 
-    const isCorrect = selectedOption == correctAnswer;
+    if (playerName === undefined || playerName === null || playerName.trim() === "") {
+      return next(new ErrorResponse("Player name is required", 400));
+    }
 
-    await GameResult.create({
+    if (selectedOption === undefined || selectedOption === null) {
+      return next(new ErrorResponse("Selected option is required", 400));
+    }
+
+    if (correctAnswer === undefined || correctAnswer === null) {
+      return next(new ErrorResponse("Correct answer is required", 400));
+    }
+
+    // Validation: Check if selectedOption is a valid number
+    const selected = parseInt(selectedOption);
+    const correct = parseInt(correctAnswer);
+    
+    if (isNaN(selected) || selected <= 0) {
+      return next(new ErrorResponse("Selected option must be a positive number", 400));
+    }
+
+    if (isNaN(correct) || correct <= 0) {
+      return next(new ErrorResponse("Invalid correct answer", 400));
+    }
+
+    // Validation: Check algorithm times
+    if (!algoTimes || typeof algoTimes !== 'object') {
+      return next(new ErrorResponse("Algorithm times are required", 400));
+    }
+
+    if (algoTimes.bfs === undefined || algoTimes.biBfs === undefined) {
+      return next(new ErrorResponse("Both algorithm times (BFS and Bidirectional BFS) are required", 400));
+    }
+
+    // Check if answer is correct
+    const isCorrect = selected === correct;
+
+    // Save game result to database
+    const gameResult = await GameResult.create({
       playerId,
-      playerName,
+      playerName: playerName.trim(),
       gameType: "snakeLadder",
       score: isCorrect ? 1 : 0,
       isCorrect,
       gameData: {
-        selectedOption,
-        correctAnswer,
-        boardSize
+        selectedOption: selected,
+        correctAnswer: correct,
+        boardSize: boardSize || null
       },
       algorithmTimes: {
-        bfs: algoTimes.bfs,
-        biBfs: algoTimes.biBfs
+        bfs: parseFloat(algoTimes.bfs) || 0,
+        biBfs: parseFloat(algoTimes.biBfs) || 0
       }
     });
 
+    if (!gameResult) {
+      return next(new ErrorResponse("Failed to save game result", 500));
+    }
+
     return Success(res, {
-      result: isCorrect ? "WIN" : "LOSE"
+      result: isCorrect ? "WIN" : "LOSE",
+      message: isCorrect 
+        ? "Congratulations! Your answer is correct." 
+        : "Sorry, your answer is incorrect. Try again!"
     });
   } catch (err) {
-    next(err);
+    console.error("Error in submitAnswer:", err);
+    
+    // Handle MongoDB validation errors
+    if (err.name === 'ValidationError') {
+      return next(new ErrorResponse(`Validation error: ${err.message}`, 400));
+    }
+    
+    // Handle duplicate key errors
+    if (err.code === 11000) {
+      return next(new ErrorResponse("Duplicate entry detected", 409));
+    }
+    
+    next(new ErrorResponse("Internal server error while submitting answer", 500));
   }
 };
 
