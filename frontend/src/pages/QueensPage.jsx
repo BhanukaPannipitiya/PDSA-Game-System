@@ -3,6 +3,21 @@ import api from "../services/api";
 import Leaderboard from "../components/Leaderboard";
 import "./QueensPage.css";
 
+// Helper function to check if a square is threatened
+const isThreatened = (row, col, solution) => {
+  for (let r = 0; r < 8; r++) {
+    if (solution[r] === -1) continue;
+    const c = solution[r];
+    if (r === row && c === col) continue; // Same position
+    
+    // Same row or column
+    if (r === row || c === col) return true;
+    // Same diagonal
+    if (Math.abs(r - row) === Math.abs(c - col)) return true;
+  }
+  return false;
+};
+
 const QueensPage = ({ player, onBack }) => {
   const [solutionInput, setSolutionInput] = useState("");
   const [status, setStatus] = useState(null);
@@ -14,8 +29,11 @@ const QueensPage = ({ player, onBack }) => {
   const [showAnimation, setShowAnimation] = useState(false);
   const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [algorithmTimes, setAlgorithmTimes] = useState({});
+  const [hoveredCell, setHoveredCell] = useState(null);
 
   const parsedSolution = useMemo(() => {
+    if (!solutionInput.trim()) return null;
+    
     const parts = solutionInput
       .split(",")
       .map((p) => p.trim())
@@ -24,7 +42,11 @@ const QueensPage = ({ player, onBack }) => {
         const num = Number(p);
         return num >= 0 && num <= 7 ? num : -1;
       });
-    return parts.length === 8 && parts.every(n => n !== -1) ? parts : null;
+    // Must have exactly 8 valid positions (one queen per row)
+    if (parts.length === 8 && parts.every(n => n !== -1)) {
+      return parts;
+    }
+    return null;
   }, [solutionInput]);
 
   const fetchStats = async () => {
@@ -42,16 +64,47 @@ const QueensPage = ({ player, onBack }) => {
   };
 
   useEffect(() => {
+    // Add background class to body for full screen coverage
+    document.body.classList.add('queens-page-active');
+    document.documentElement.classList.add('queens-page-active');
+    
     fetchStats();
+    
+    return () => {
+      // Cleanup: remove class when component unmounts
+      document.body.classList.remove('queens-page-active');
+      document.documentElement.classList.remove('queens-page-active');
+    };
   }, []);
 
   useEffect(() => {
     if (parsedSolution) {
+      // Valid complete solution (8 queens)
       setBoardPreview(parsedSolution);
-    } else {
+    } else if (solutionInput.trim() === "") {
+      // Empty input - clear board
       setBoardPreview(Array(8).fill(-1));
+    } else {
+      // Partial solution - parse what we can and update board
+      const parts = solutionInput
+        .split(",")
+        .map((p) => p.trim())
+        .filter((p) => p !== "")
+        .map((p) => {
+          const num = Number(p);
+          return num >= 0 && num <= 7 ? num : -1;
+        });
+      
+      // Build board state from parsed parts
+      const newBoard = Array(8).fill(-1);
+      for (let i = 0; i < Math.min(parts.length, 8); i++) {
+        if (parts[i] !== -1) {
+          newBoard[i] = parts[i];
+        }
+      }
+      setBoardPreview(newBoard);
     }
-  }, [parsedSolution]);
+  }, [parsedSolution, solutionInput]);
 
   const handleCompute = async () => {
     setLoading(true);
@@ -143,30 +196,79 @@ const QueensPage = ({ player, onBack }) => {
 
   const renderBoard = (solution) => {
     const board = [];
+    
     for (let r = 0; r < 8; r += 1) {
       const row = [];
       for (let c = 0; c < 8; c += 1) {
         const hasQueen = solution[r] === c;
-        const isSelected = selectedSolution && selectedSolution[r] === c;
+        const isThreatenedCell = hasQueen ? false : isThreatened(r, c, solution);
+        const isHovered = hoveredCell?.row === r && hoveredCell?.col === c;
         
         row.push(
           <div 
             key={c} 
-            className={`cell ${(r + c) % 2 === 0 ? "light" : "dark"} ${hasQueen ? "has-queen" : ""}`}
+            className={`cell ${(r + c) % 2 === 0 ? "light" : "dark"} ${hasQueen ? "has-queen" : ""} ${isThreatenedCell ? "threatened" : ""}`}
             onClick={() => {
-              // Allow manual placement in preview mode
-              if (!parsedSolution) {
-                const newSolution = [...solution];
-                newSolution[r] = newSolution[r] === c ? -1 : c;
-                setSolutionInput(newSolution.filter(n => n !== -1).join(","));
+              // Allow manual placement by clicking on the board
+              // Each row must have exactly one queen, so clicking places/moves the queen in that row
+              const newSolution = [...solution];
+              
+              // If clicking on a cell that already has a queen, remove it (set to -1)
+              // Otherwise, place/move the queen to this cell
+              if (newSolution[r] === c) {
+                newSolution[r] = -1;
+              } else {
+                newSolution[r] = c;
+              }
+              
+              // Update board preview immediately for responsive UI
+              setBoardPreview(newSolution);
+              
+              // Update solution input - build from board state maintaining row positions
+              // Input format: comma-separated column values where position = row index
+              // Always include all 8 positions to preserve row information
+              const inputParts = [];
+              for (let i = 0; i < 8; i++) {
+                if (newSolution[i] !== -1) {
+                  inputParts.push(newSolution[i].toString());
+                } else {
+                  // Use empty string as placeholder - will be filtered by parser
+                  // but this maintains the positional structure when all 8 are present
+                  inputParts.push('');
+                }
+              }
+              // Join and clean up: remove empty parts but this loses position info
+              // Better approach: only show complete solutions in input, or show all with placeholders
+              // For now, if all 8 rows have queens, show the full solution
+              // Otherwise, show only the placed queens (user can complete by clicking)
+              const hasAllQueens = newSolution.every(val => val !== -1);
+              if (hasAllQueens) {
+                setSolutionInput(inputParts.join(','));
+              } else {
+                // For partial solutions, just show the placed queens
+                // The board state maintains the correct positions
+                const placed = newSolution.filter(val => val !== -1);
+                setSolutionInput(placed.join(','));
               }
             }}
+            onMouseEnter={() => setHoveredCell({ row: r, col: c })}
+            onMouseLeave={() => setHoveredCell(null)}
+            title={hasQueen ? "Queen" : isThreatenedCell ? "Threatened" : "Empty"}
           >
             {hasQueen ? (
               <div className={`queen ${showAnimation ? "animate" : ""}`}>
                 ♛
               </div>
             ) : ""}
+            {isHovered && !hasQueen && (
+              <div style={{
+                position: 'absolute',
+                fontSize: '20px',
+                opacity: 0.5,
+                color: '#F9CB28',
+                zIndex: 1
+              }}>+</div>
+            )}
           </div>
         );
       }
@@ -179,25 +281,38 @@ const QueensPage = ({ player, onBack }) => {
     return board;
   };
 
-  const renderSolutionItem = (solution, index) => (
-    <div 
-      key={index}
-      className="solution-item"
-      onClick={() => {
-        setSelectedSolution(solution);
-        setSolutionInput(solution.join(","));
-      }}
-    >
-      <div className="solution-preview">
-        {solution.map((col, idx) => (
-          <div key={idx} className="solution-col">
-            {col}
-          </div>
-        ))}
+  const renderSolutionItem = (solution, index) => {
+    const isSelected = selectedSolution && JSON.stringify(selectedSolution) === JSON.stringify(solution);
+    
+    return (
+      <div 
+        key={index}
+        className={`solution-item ${isSelected ? "selected" : ""}`}
+        onClick={() => {
+          setSelectedSolution(solution);
+          setSolutionInput(solution.join(","));
+          setShowAnimation(true);
+          setTimeout(() => setShowAnimation(false), 1000);
+        }}
+      >
+        <div className="solution-preview">
+          {solution.map((col, idx) => (
+            <div key={idx} className="solution-col">
+              {col}
+            </div>
+          ))}
+        </div>
+        <div className="solution-index">Solution #{index + 1}</div>
+        {isSelected && <div style={{
+          position: 'absolute',
+          top: '8px',
+          right: '8px',
+          fontSize: '1.2rem',
+          color: '#F9CB28'
+        }}>✓</div>}
       </div>
-      <div className="solution-index">Solution #{index + 1}</div>
-    </div>
-  );
+    );
+  };
 
   if (!player) {
     return (

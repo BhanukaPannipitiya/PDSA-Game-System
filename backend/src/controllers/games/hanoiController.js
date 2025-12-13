@@ -53,14 +53,14 @@ exports.solveHanoi = async (req, res) => {
     if (numPegs === 3) {
       // Algorithm 1: Recursive
       const start1 = performance.now();
-      solution1 = recursive3Pegs(numDisks, 'A', 'D', 'B');
+      solution1 = recursive3Pegs(numDisks, 'A', 'C', 'B');
       const end1 = performance.now();
       time1 = end1 - start1;
       algo1Name = 'Recursive 3-Peg';
       
       // Algorithm 2: Iterative
       const start2 = performance.now();
-      solution2 = iterative3Pegs(numDisks, 'A', 'D', 'B');
+      solution2 = iterative3Pegs(numDisks, 'A', 'C', 'B');
       const end2 = performance.now();
       time2 = end2 - start2;
       algo2Name = 'Iterative 3-Peg';
@@ -160,13 +160,13 @@ exports.submitAnswer = async (req, res) => {
     
     if (numPegs === 3) {
       const start1 = performance.now();
-      correctSequence = recursive3Pegs(numDisks, 'A', 'D', 'B');
+      correctSequence = recursive3Pegs(numDisks, 'A', 'C', 'B');
       const end1 = performance.now();
       time1 = end1 - start1;
       algo1Name = 'Recursive 3-Peg';
       
       const start2 = performance.now();
-      iterative3Pegs(numDisks, 'A', 'D', 'B');
+      iterative3Pegs(numDisks, 'A', 'C', 'B');
       const end2 = performance.now();
       time2 = end2 - start2;
       algo2Name = 'Iterative 3-Peg';

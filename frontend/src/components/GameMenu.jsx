@@ -80,8 +80,24 @@ export default function GameMenu({ onGameSelect }) {
       
       <div style={styles.grid}>
         {games.map((game) => {
-          const isQueens = game.name === "Eight Queens Puzzle";
-          const target = isQueens ? "#/queens" : "#";
+          const isQueens = game.gameType === "queens";
+          const isHanoi = game.gameType === "hanoi";
+          const target = isQueens ? "#/queens" : isHanoi ? "#/hanoi" : "#";
+          
+          const handleCardClick = (e) => {
+            // Don't stop propagation if clicking the button - let button handle it
+            if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
+              return;
+            }
+            e.stopPropagation();
+            if (isQueens || isHanoi) {
+              if (onGameSelect) {
+                onGameSelect(game.gameType);
+              } else {
+                window.location.hash = target;
+              }
+            }
+          };
           
           return (
             <div 
@@ -97,14 +113,7 @@ export default function GameMenu({ onGameSelect }) {
               className="game-card"
               onMouseEnter={() => setHoveredCard(game.id)}
               onMouseLeave={() => setHoveredCard(null)}
-              onClick={(e) => {
-                e.stopPropagation();
-                if (onGameSelect) {
-                  onGameSelect(game.gameType);
-                } else if (isQueens) {
-                  window.location.hash = target;
-                }
-              }}
+              onClick={handleCardClick}
             >
               <div style={styles.cardBadge}>
                 {game.status}
@@ -135,10 +144,12 @@ export default function GameMenu({ onGameSelect }) {
                     style={styles.playButton}
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (onGameSelect) {
-                        onGameSelect(game.gameType);
-                      } else if (isQueens) {
-                        window.location.hash = target;
+                      if (isQueens || isHanoi) {
+                        if (onGameSelect) {
+                          onGameSelect(game.gameType);
+                        } else {
+                          window.location.hash = target;
+                        }
                       }
                     }}
                   >

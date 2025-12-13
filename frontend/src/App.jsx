@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import GameMenu from "./components/GameMenu";
 import LoginSignup from "./components/LoginSignup";
 import QueensPage from "./pages/QueensPage";
+import TowerOfHanoi from "./pages/TowerOfHanoi";
 import "./App.css";
 import SnakeLadderPage from "./pages/SnakeLadderPage";
 
@@ -25,8 +26,21 @@ function App() {
   }, []);
 
   useEffect(() => {
-    const onHashChange = () => setHash(window.location.hash);
+    const onHashChange = () => {
+      const newHash = window.location.hash;
+      setHash(newHash);
+      // Sync currentGame with hash
+      if (newHash === "#/queens") {
+        setCurrentGame("queens");
+      } else if (newHash === "#/hanoi") {
+        setCurrentGame("hanoi");
+      } else if (newHash === "" || newHash === "#") {
+        setCurrentGame(null);
+      }
+    };
     window.addEventListener("hashchange", onHashChange);
+    // Also check initial hash
+    onHashChange();
     return () => window.removeEventListener("hashchange", onHashChange);
   }, []);
 
@@ -49,6 +63,8 @@ function App() {
     setCurrentGame(gameType);
     if (gameType === "queens") {
       window.location.hash = "#/queens";
+    } else if (gameType === "hanoi") {
+      window.location.hash = "#/hanoi";
     }
   };
 
@@ -74,6 +90,15 @@ function App() {
   if (hash === "#/snake-ladder" || currentGame === "snakeLadder") {
     return (
       <SnakeLadderPage 
+        player={player} 
+        onBack={handleBackToMenu}
+      />
+    );
+  }
+
+  if (hash === "#/hanoi" || currentGame === "hanoi") {
+    return (
+      <TowerOfHanoi 
         player={player} 
         onBack={handleBackToMenu}
       />

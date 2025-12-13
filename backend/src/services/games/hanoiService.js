@@ -192,17 +192,21 @@ function moveDiskHelper(pegs, from, to, moves) {
     [from, to] = [to, from];
   }
   
-  pegs[from].pop();
+  const disk = pegs[from].pop();
+  pegs[to].push(disk);
   moves.push(`${from} -> ${to}`);
 }
 
 // Calculate minimum moves
 function calculateMinMoves(n, numPegs) {
+  if (n <= 0) return 0;
+  if (n === 1) return 1;
+  
   if (numPegs === 3) {
     return Math.pow(2, n) - 1;
   } else if (numPegs === 4) {
     // Frame-Stewart formula approximation
-    const k = Math.ceil(n - Math.sqrt(2 * n + 1) + 1);
+    const k = Math.max(1, Math.min(n - 1, Math.ceil(n - Math.sqrt(2 * n + 1) + 1)));
     return 2 * calculateMinMoves(k, 4) + Math.pow(2, n - k) - 1;
   }
   return 0;
