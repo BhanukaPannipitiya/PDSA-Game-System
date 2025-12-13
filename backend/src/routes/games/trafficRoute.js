@@ -1,7 +1,9 @@
 const router = require("express").Router();
 
-router.get("/test", (req, res) => {
-  res.json({ message: "Route working" });
-});
+const controller = require("../../controllers/games/trafficController");
+
+router.post("/start", controller.startGame);
+router.post("/answer", controller.submitAnswer);
+router.get("/leaderboard", controller.getLeaderboard);
 
 module.exports = router;
