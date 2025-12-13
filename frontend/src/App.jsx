@@ -5,6 +5,8 @@ import QueensPage from "./pages/QueensPage";
 import TrafficPage from "./pages/TrafficPage";
 import TspPage from "./pages/TspPage";
 import "./App.css";
+import SnakeLadderPage from "./pages/SnakeLadderPage";
+import TowerOfHanoi from "./pages/TowerOfHanoi";
 
 function App() {
   const [hash, setHash] = useState(
@@ -54,6 +56,10 @@ function App() {
     setCurrentGame(gameType);
     if (gameType === "queens") {
       window.location.hash = "#/queens";
+    } else if (gameType === "snake-ladder") {
+      window.location.hash = "#/snake-ladder";
+    } else if (gameType === "tower-of-hanoi") {
+      window.location.hash = "#/tower-of-hanoi";
     } else if (gameType === "traffic") {
       window.location.hash = "#/traffic";
     } else if (gameType === "tsp") {
@@ -78,6 +84,14 @@ function App() {
 
   if (hash === "#/traffic" || currentGame === "traffic") {
     return <TrafficPage player={player} onBack={handleBackToMenu} />;
+  }
+
+  if (hash === "#/snake-ladder" || currentGame === "snake-ladder") {
+    return <SnakeLadderPage player={player} onBack={handleBackToMenu} />;
+  }
+
+  if (hash === "#/tower-of-hanoi" || currentGame === "tower-of-hanoi") {
+    return <TowerOfHanoi player={player} onBack={handleBackToMenu} />;
   }
 
   if (hash === "#/tsp" || currentGame === "tsp") {

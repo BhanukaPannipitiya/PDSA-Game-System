@@ -83,10 +83,16 @@ export default function GameMenu({ onGameSelect }) {
       <div style={styles.grid}>
         {games.map((game) => {
           const isQueens = game.name === "Eight Queens Puzzle";
+          const isSnakeLadder = game.name === "Snake & Ladder";
+          const isTowerOfHanoi = game.name === "Tower of Hanoi";
           const isTraffic = game.gameType === "traffic";
           const isTsp = game.gameType === "tsp";
           const target = isQueens
             ? "#/queens"
+            : isSnakeLadder
+            ? "#/snake-ladder"
+            : isTowerOfHanoi
+            ? "#/tower-of-hanoi"
             : isTraffic
             ? "#/traffic"
             : isTsp
@@ -121,6 +127,14 @@ export default function GameMenu({ onGameSelect }) {
                   onGameSelect("traffic");
                 } else if (isTsp && onGameSelect) {
                   onGameSelect("tsp");
+                } else if (isSnakeLadder && onGameSelect) {
+                  onGameSelect("snake-ladder");
+                } else if (isTowerOfHanoi && onGameSelect) {
+                  onGameSelect("tower-of-hanoi");
+                } else if (isSnakeLadder) {
+                  window.location.hash = target;
+                } else if (isTowerOfHanoi) {
+                  window.location.hash = target;
                 } else if (isQueens) {
                   window.location.hash = target;
                 } else if (isTraffic) {
@@ -164,6 +178,14 @@ export default function GameMenu({ onGameSelect }) {
                         onGameSelect("traffic");
                       } else if (isTsp && onGameSelect) {
                         onGameSelect("tsp");
+                      } else if (isSnakeLadder && onGameSelect) {
+                        onGameSelect("snake-ladder");
+                      } else if (isTowerOfHanoi && onGameSelect) {
+                        onGameSelect("tower-of-hanoi");
+                      } else if (isSnakeLadder) {
+                        window.location.hash = target;
+                      } else if (isTowerOfHanoi) {
+                        window.location.hash = target;
                       } else if (isQueens) {
                         window.location.hash = target;
                       } else if (isTraffic) {
