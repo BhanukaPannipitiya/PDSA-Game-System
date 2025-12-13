@@ -1,6 +1,7 @@
 require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
+const hanoiRoute = require('./routes/games/hanoiRoute');
 const connectDB = require("./config/db");
 
 const app = express();
@@ -13,6 +14,8 @@ app.use((req, res, next) => {
 
 // Middleware
 app.use(express.json());
+app.use(cors());
+app.use(express.urlencoded({ extended: true }));
 
 // CORS configuration
 const corsOptions = {
