@@ -10,6 +10,8 @@ router.use("/leaderboard", require("./leaderboardRoute"));
 router.use("/games/snakeladder", require("./games/snakeLadderRoute"));
 router.use("/games/hanoi", require("./games/hanoiRoute"));
 router.use("/games/queens", require("./games/queensRoute"));
+router.use("/games/traffic", require("./games/trafficRoute"));
+router.use("/games/tsp", require("./games/tspRoute"));
 
 module.exports = router;
 
