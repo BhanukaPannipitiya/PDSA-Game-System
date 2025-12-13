@@ -183,6 +183,35 @@
 }
 
 /* Game Board Section */
+/* New two-column layout */
+.game-layout {
+  display: flex;
+  gap: 2rem;
+  width: 100%;
+  max-width: 1400px;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 0 1rem;
+}
+
+.left-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0; /* Allow flex shrinking */
+}
+
+.right-panel {
+  flex: 0 0 350px; /* Fixed width for right panel */
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  position: sticky;
+  top: 2rem;
+  align-self: flex-start;
+}
+
 .game-board-section {
   display: flex;
   gap: 2rem;
@@ -200,6 +229,7 @@
   display: flex;
   justify-content: center;
   align-items: flex-start;
+  width: 100%;
 }
 
 .board-wrapper {
@@ -250,7 +280,6 @@
   border-radius: 10px;
   padding: 0;
   overflow: hidden;
-  /* Use hidden to prevent cells from overflowing */
   box-sizing: border-box;
 }
 
@@ -261,11 +290,9 @@
   border: 2px solid rgba(249, 203, 40, 0.3);
   border-radius: 15px;
   backdrop-filter: blur(10px);
-  min-width: 280px;
-  max-width: 320px;
-  position: sticky;
-  top: 2rem;
-  align-self: flex-start;
+  padding: 2rem;
+  width: 100%;
+  max-width: 100%;
 }
 
 .rules-card h4 {
@@ -390,19 +417,15 @@
 }
 
 .start-label {
-  top: 2px;
-  left: 2px;
+  bottom: 2px;
   color: #00FFAA;
-  background: rgba(0, 212, 170, 0.3);
-  border: 1px solid #00D4AA;
+  margin-bottom: 4px;
 }
 
 .end-label {
   bottom: 2px;
-  right: 2px;
   color: #F9CB28;
-  background: rgba(249, 203, 40, 0.3);
-  border: 1px solid #F9CB28;
+  margin-bottom: 2px;
 }
 
 /* Destination indicators - cleaner and more professional */
@@ -486,7 +509,6 @@
   border: 2px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   width: 100%;
-  max-width: 600px;
 }
 
 .snake-ladder-options h3 {
@@ -700,6 +722,21 @@
 }
 
 /* Responsive */
+@media (max-width: 1024px) {
+  .game-layout {
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .right-panel {
+    flex: 1;
+    width: 100%;
+    max-width: 600px;
+    position: relative;
+    top: 0;
+  }
+}
+
 @media (max-width: 768px) {
   .snake-ladder-container {
     padding: 1rem;

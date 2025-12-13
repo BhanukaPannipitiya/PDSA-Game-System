@@ -34,6 +34,8 @@ function App() {
         setCurrentGame("queens");
       } else if (newHash === "#/hanoi") {
         setCurrentGame("hanoi");
+      } else if (newHash === "#/snake-ladder") {
+        setCurrentGame("snakeLadder");
       } else if (newHash === "" || newHash === "#") {
         setCurrentGame(null);
       }
@@ -65,6 +67,8 @@ function App() {
       window.location.hash = "#/queens";
     } else if (gameType === "hanoi") {
       window.location.hash = "#/hanoi";
+    } else if (gameType === "snakeLadder") {
+      window.location.hash = "#/snake-ladder";
     }
   };
 

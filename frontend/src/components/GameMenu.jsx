@@ -82,7 +82,8 @@ export default function GameMenu({ onGameSelect }) {
         {games.map((game) => {
           const isQueens = game.gameType === "queens";
           const isHanoi = game.gameType === "hanoi";
-          const target = isQueens ? "#/queens" : isHanoi ? "#/hanoi" : "#";
+          const isSnakeLadder = game.gameType === "snakeLadder";
+          const target = isQueens ? "#/queens" : isHanoi ? "#/hanoi" : isSnakeLadder ? "#/snake-ladder" : "#";
           
           const handleCardClick = (e) => {
             // Don't stop propagation if clicking the button - let button handle it
@@ -90,7 +91,7 @@ export default function GameMenu({ onGameSelect }) {
               return;
             }
             e.stopPropagation();
-            if (isQueens || isHanoi) {
+            if (isQueens || isHanoi || isSnakeLadder) {
               if (onGameSelect) {
                 onGameSelect(game.gameType);
               } else {
@@ -144,7 +145,7 @@ export default function GameMenu({ onGameSelect }) {
                     style={styles.playButton}
                     onClick={(e) => {
                       e.stopPropagation();
-                      if (isQueens || isHanoi) {
+                      if (isQueens || isHanoi || isSnakeLadder) {
                         if (onGameSelect) {
                           onGameSelect(game.gameType);
                         } else {

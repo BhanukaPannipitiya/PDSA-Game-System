@@ -24,7 +24,7 @@ function RulesCard() {
 function Board({ snakes, ladders, boardSize }) {
     const totalCells = boardSize * boardSize;
     // Increased cell size for better visibility - made bigger
-    const cellSize = Math.min(800 / boardSize, 80); // Responsive cell size - increased significantly
+    const cellSize = Math.min(1000 / boardSize, 100); // Responsive cell size - increased significantly
     
     // Create cell positions in snake pattern (zigzag)
     // Cell 1 at bottom-left, zigzag up
@@ -126,10 +126,10 @@ function Board({ snakes, ladders, boardSize }) {
                         const startPos = cellPositions[startCell];
                         const endPos = cellPositions[endCell];
                         
-                        const startX = startPos.x;
+                        const startX = startPos.x + (cellSize / 4) - 6;
                         const startY = startPos.y;
-                        const endX = endPos.x;
-                        const endY = endPos.y;
+                        const endX = endPos.x + (cellSize / 4) - 6;
+                        const endY = endPos.y + (cellSize / 3) - 6;
                         
                         const dx = endX - startX;
                         const dy = endY - startY;
@@ -150,7 +150,7 @@ function Board({ snakes, ladders, boardSize }) {
                                     x2={endX - perpX}
                                     y2={endY - perpY}
                                     stroke="#00FFAA"
-                                    strokeWidth="7"
+                                    strokeWidth="4"
                                     strokeLinecap="round"
                                     opacity="0.95"
                                 />
@@ -160,7 +160,7 @@ function Board({ snakes, ladders, boardSize }) {
                                     x2={endX + perpX}
                                     y2={endY + perpY}
                                     stroke="#00FFAA"
-                                    strokeWidth="7"
+                                    strokeWidth="4"
                                     strokeLinecap="round"
                                     opacity="0.95"
                                 />
@@ -178,46 +178,12 @@ function Board({ snakes, ladders, boardSize }) {
                                             x2={rungX + perpX}
                                             y2={rungY + perpY}
                                             stroke="#00D4AA"
-                                            strokeWidth="5"
+                                            strokeWidth="3"
                                             strokeLinecap="round"
                                             opacity="0.95"
                                         />
                                     );
                                 })}
-                                
-                                {/* Ladder top - wider to show it's the top */}
-                                <line
-                                    x1={endX - perpX * 1.5}
-                                    y1={endY - perpY * 1.5}
-                                    x2={endX + perpX * 1.5}
-                                    y2={endY + perpY * 1.5}
-                                    stroke="#00FFAA"
-                                    strokeWidth="8"
-                                    strokeLinecap="round"
-                                    opacity="1"
-                                />
-                                
-                                {/* Ladder start point marker - centered in cell */}
-                                <circle
-                                    cx={startX}
-                                    cy={startY}
-                                    r="4"
-                                    fill="#00FFAA"
-                                    stroke="#00D4AA"
-                                    strokeWidth="1.5"
-                                    opacity="0.9"
-                                />
-                                
-                                {/* Ladder end point marker - centered in cell */}
-                                <circle
-                                    cx={endX}
-                                    cy={endY}
-                                    r="5"
-                                    fill="#00FFAA"
-                                    stroke="#00D4AA"
-                                    strokeWidth="1.5"
-                                    opacity="0.9"
-                                />
                             </g>
                         );
                     })}
@@ -233,12 +199,12 @@ function Board({ snakes, ladders, boardSize }) {
                         // Snake head at right edge of start cell (right corner)
                         // startPos.x is the cell center, so right edge is startPos.x + cellSize/2
                         // We'll position it slightly inset from the right edge for better visibility
-                        const startX = startPos.x + (cellSize / 2) - 6; // Right edge, slightly inset
+                        const startX = startPos.x + (cellSize / 4) - 6; // Right edge, slightly inset
                         const startY = startPos.y; // Center vertically
                         
                         // Snake tail at center of end cell
-                        const endX = endPos.x;     // Exact center of end cell (snake tail)
-                        const endY = endPos.y;     // Exact center of end cell (snake tail)
+                        const endX = endPos.x + (cellSize / 4) - 6;   // Exact center of end cell (snake tail)
+                        const endY = endPos.y + (cellSize / 3) - 6;   // Exact center of end cell (snake tail)
                         
                         const dx = endX - startX;
                         const dy = endY - startY;
@@ -366,27 +332,6 @@ function Board({ snakes, ladders, boardSize }) {
                                         strokeLinecap="round"
                                     />
                                 </g>
-                                
-                                {/* Snake tail - tapered */}
-                                <g className="snake-tail">
-                                    <circle
-                                        cx={endX}
-                                        cy={endY}
-                                        r="6"
-                                        fill="#FF0000"
-                                        stroke="#FF6B8B"
-                                        strokeWidth="2"
-                                        opacity="0.9"
-                                    />
-                                    <ellipse
-                                        cx={endX}
-                                        cy={endY}
-                                        rx="3"
-                                        ry="6"
-                                        fill="#FF6B8B"
-                                        opacity="0.6"
-                                    />
-                                </g>
                             </g>
                         );
                     })}
@@ -399,9 +344,7 @@ function Board({ snakes, ladders, boardSize }) {
                         gridTemplateColumns: `repeat(${boardSize}, ${cellSize}px)`,
                         gridTemplateRows: `repeat(${boardSize}, ${cellSize}px)`,
                         width: svgWidth,
-                        height: svgHeight,
-                        marginTop: '25px',
-                        marginLeft: '25px'
+                        height: svgHeight
                     }}
                 >
                     {Array.from({ length: totalCells }, (_, i) => {
@@ -463,21 +406,13 @@ function Board({ snakes, ladders, boardSize }) {
                                 {cellNum === totalCells && <span className="cell-label end-label">FINISH</span>}
                                 
                                 {/* Snake/Ladder destination indicators - cleaner display */}
-                                {isLadderStart && (
+                                {/* {isLadderStart && (
                                     <div className="cell-destination ladder-dest" title={`Ladder to cell ${ladderDest}`}>
                                         <span className="dest-icon">🪜</span>
                                         <span className="dest-number">{ladderDest}</span>
                                     </div>
-                                )}
-                                {isSnakeStart && (
-                                    <div className="cell-destination snake-dest" title={`Snake to cell ${snakeDest}`}>
-                                        <span className="dest-icon">🐍</span>
-                                        <span className="dest-number">{snakeDest}</span>
-                                    </div>
-                                )}
-                                {(isSnakeEnd || isLadderEnd) && (
-                                    <div className={`cell-end-marker ${isSnakeEnd ? 'snake-end' : 'ladder-end'}`}></div>
-                                )}
+                                )} */}
+                                {/*   */}
                             </div>
                         );
                     })}
@@ -708,8 +643,9 @@ export default function SnakeLadderPage({ player, onBack }) {
                     </button>
                 </div>
             ) : !result ? (
-                <>
-                    <div className="game-board-section">
+                <div className="game-layout">
+                    {/* Left side: Board and Instructions */}
+                    <div className="left-panel">
                         <div className="board-container-wrapper">
                             <Board 
                                 snakes={gameData.snakes} 
@@ -717,14 +653,18 @@ export default function SnakeLadderPage({ player, onBack }) {
                                 boardSize={gameData.boardSize}
                             />
                         </div>
-                        {/* <RulesCard /> */}
                     </div>
-                    <Options 
-                        options={gameData.options} 
-                        onSelect={handleSubmit}
-                    />
-                    {loading && <div className="loading">Submitting...</div>}
-                </>
+                    
+                    {/* Right side: Rules and Options */}
+                    <div className="right-panel">
+                        <RulesCard />
+                        <Options 
+                            options={gameData.options} 
+                            onSelect={handleSubmit}
+                        />
+                        {loading && <div className="loading">Submitting...</div>}
+                    </div>
+                </div>
             ) : (
                 <>
                     <ResultCard result={result} algoTimes={gameData?.algoTimes} />
