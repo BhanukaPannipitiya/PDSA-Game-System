@@ -1,7 +1,10 @@
 const router = require("express").Router();
 
-router.get("/test", (req, res) => {
-  res.json({ message: "Route working" });
-});
+const controller = require("../../controllers/games/tspController");
+
+router.post("/start", controller.startGame);
+router.post("/solve", controller.solveTSP);
+router.post("/answer", controller.submitAnswer);
+router.get("/leaderboard", controller.getLeaderboard);
 
 module.exports = router;
