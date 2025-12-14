@@ -1,4 +1,7 @@
 const trafficService = require("../services/games/trafficService");
+const { buildGraph } = require("../algorithms/traffic/graphUtils");
+const { edmondsKarp } = require("../algorithms/traffic/edmondsKarp");
+const { fordFulkerson } = require("../algorithms/traffic/fordFulkerson");
 
 describe("Traffic Service", () => {
   describe("Network Generation", () => {
@@ -81,8 +84,8 @@ describe("Traffic Service", () => {
         { from: "C", to: "T", capacity: 15 },
       ];
 
-      const graph = trafficService.buildGraph(edges);
-      const maxFlow = trafficService.edmondsKarp(graph, "A", "T");
+      const graph = buildGraph(edges);
+      const maxFlow = edmondsKarp(graph, "A", "T");
 
       expect(maxFlow).toBe(25); // 10 + 15
     });
@@ -95,8 +98,8 @@ describe("Traffic Service", () => {
         { from: "C", to: "T", capacity: 15 },
       ];
 
-      const graph = trafficService.buildGraph(edges);
-      const maxFlow = trafficService.fordFulkerson(graph, "A", "T");
+      const graph = buildGraph(edges);
+      const maxFlow = fordFulkerson(graph, "A", "T");
 
       expect(maxFlow).toBe(25); // 10 + 15
     });
@@ -117,10 +120,10 @@ describe("Traffic Service", () => {
         { from: "C", to: "T", capacity: 10 }, // Bottleneck
       ];
 
-      const graph = trafficService.buildGraph(edges);
-      const edmondsKarpFlow = trafficService.edmondsKarp(graph, "A", "T");
-      const fordFulkersonFlow = trafficService.fordFulkerson(
-        trafficService.buildGraph(edges),
+      const graph = buildGraph(edges);
+      const edmondsKarpFlow = edmondsKarp(graph, "A", "T");
+      const fordFulkersonFlow = fordFulkerson(
+        buildGraph(edges),
         "A",
         "T"
       );
@@ -136,8 +139,8 @@ describe("Traffic Service", () => {
         { from: "C", to: "T", capacity: 7 },
       ];
 
-      const graph = trafficService.buildGraph(edges);
-      const maxFlow = trafficService.edmondsKarp(graph, "A", "T");
+      const graph = buildGraph(edges);
+      const maxFlow = edmondsKarp(graph, "A", "T");
 
       expect(maxFlow).toBe(5); // Limited by minimum capacity
     });
@@ -148,8 +151,8 @@ describe("Traffic Service", () => {
         { from: "C", to: "T", capacity: 10 },
       ];
 
-      const graph = trafficService.buildGraph(edges);
-      const maxFlow = trafficService.edmondsKarp(graph, "A", "T");
+      const graph = buildGraph(edges);
+      const maxFlow = edmondsKarp(graph, "A", "T");
 
       expect(maxFlow).toBe(0);
     });
@@ -175,8 +178,8 @@ describe("Traffic Service", () => {
         { from: "B", to: "T", capacity: 10 },
       ];
 
-      const graph = trafficService.buildGraph(edges);
-      const maxFlow = trafficService.edmondsKarp(graph, "A", "T");
+      const graph = buildGraph(edges);
+      const maxFlow = edmondsKarp(graph, "A", "T");
 
       expect(maxFlow).toBe(0);
     });
@@ -186,8 +189,8 @@ describe("Traffic Service", () => {
         { from: "A", to: "B", capacity: 10 },
       ];
 
-      const graph = trafficService.buildGraph(edges);
-      const maxFlow = trafficService.edmondsKarp(graph, "A", "A");
+      const graph = buildGraph(edges);
+      const maxFlow = edmondsKarp(graph, "A", "A");
 
       expect(maxFlow).toBe(0);
     });
