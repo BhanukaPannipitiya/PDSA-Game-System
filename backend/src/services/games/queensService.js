@@ -1,8 +1,12 @@
-const QueenSolution = require("../../models/queenSolutionModel");
-const QueenRun = require("../../models/queenRunModel");
-const GameResult = require("../../models/gameResultModel");
+const {
+  ReferenceSolution,
+  GameRound,
+  AlgorithmRun,
+  PlayerSubmission,
+} = require("../../models");
 const { solveEightQueensSequential } = require("../../algorithms/queens/sequentialSolver");
 const { solveEightQueensThreaded } = require("../../algorithms/queens/threadedSolver");
+const { Op } = require("sequelize");
 const ErrorResponse = require("../../utils/errorHandler");
 
 const BOARD_SIZE = 8;
@@ -28,26 +32,26 @@ function isValidPositions(positions) {
 }
 
 async function ensureSolutionsSeeded() {
-  const count = await QueenSolution.countDocuments();
+  const count = await ReferenceSolution.count({
+    where: { gameType: "queens" },
+  });
   if (count > 0) return count;
   const { solutions } = await computeSequential();
   return solutions.length;
 }
 
 async function upsertSolutions(solutions) {
-  const bulkOps = solutions.map((positions) => ({
-    updateOne: {
-      filter: { solutionKey: normalizeSolution(positions) },
-      update: {
-        $setOnInsert: {
-          positions,
-        },
+  for (const positions of solutions) {
+    const solutionKey = normalizeSolution(positions);
+    await ReferenceSolution.findOrCreate({
+      where: { gameType: "queens", solutionKey },
+      defaults: {
+        gameType: "queens",
+        solution: positions,
+        solutionKey,
+        recognized: false,
       },
-      upsert: true,
-    },
-  }));
-  if (bulkOps.length) {
-    await QueenSolution.bulkWrite(bulkOps);
+    });
   }
 }
 
@@ -70,38 +74,91 @@ async function computeAndPersistRun() {
   const sequentialResult = await computeSequential();
   const threadedResult = await computeThreaded();
 
-  const run = await QueenRun.create({
-    sequentialTimeMs: sequentialResult.timeMs,
-    threadedTimeMs: threadedResult.timeMs,
-    totalSolutions: sequentialResult.solutions.length,
+  // Get or create system player for computation runs
+  const { Player } = require("../../models");
+  let systemPlayer = await Player.findOne({ where: { name: "system" } });
+  if (!systemPlayer) {
+    systemPlayer = await Player.create({ name: "system" });
+  }
+
+  // Create a game round for this computation run
+  const gameRound = await GameRound.create({
+    playerId: systemPlayer.id,
+    playerName: "system",
+    gameType: "queens",
+    gameConfig: { type: "computation_run" },
+  });
+
+  // Store algorithm runs
+  await AlgorithmRun.create({
+    gameRoundId: gameRound.id,
+    algorithmName: "Sequential",
+    executionTimeMs: sequentialResult.timeMs,
+    algorithmResult: { totalSolutions: sequentialResult.solutions.length },
+  });
+
+  await AlgorithmRun.create({
+    gameRoundId: gameRound.id,
+    algorithmName: "Threaded",
+    executionTimeMs: threadedResult.timeMs,
+    algorithmResult: { totalSolutions: threadedResult.solutions.length },
   });
 
   return {
     sequentialTimeMs: sequentialResult.timeMs,
     threadedTimeMs: threadedResult.timeMs,
     totalSolutions: sequentialResult.solutions.length,
-    runId: run.id,
+    runId: gameRound.id,
   };
 }
 
 async function getStats() {
   const totalSolutions = await ensureSolutionsSeeded();
-  const recognizedCount = await QueenSolution.countDocuments({ recognized: true });
-  const latestRun = await QueenRun.findOne().sort({ createdAt: -1 }).lean();
+  const recognizedCount = await ReferenceSolution.count({
+    where: { gameType: "queens", recognized: true },
+  });
+
+  // Get latest algorithm run
+  const latestRun = await AlgorithmRun.findOne({
+    where: {
+      algorithmName: "Sequential",
+    },
+    include: [
+      {
+        model: GameRound,
+        as: "gameRound",
+        where: { gameType: "queens" },
+      },
+    ],
+    order: [["createdAt", "DESC"]],
+  });
 
   // Get sample solutions for display
-  const sampleSolutions = await QueenSolution.find()
-    .limit(6)
-    .select("positions -_id")
-    .lean();
+  const sampleSolutions = await ReferenceSolution.findAll({
+    where: { gameType: "queens" },
+    limit: 6,
+    attributes: ["solution"],
+    raw: true,
+  });
+
+  const sequentialTimeMs = latestRun?.executionTimeMs ?? null;
+  const threadedRun = latestRun
+    ? await AlgorithmRun.findOne({
+        where: {
+          gameRoundId: latestRun.gameRoundId,
+          algorithmName: "Threaded",
+        },
+      })
+    : null;
+  const threadedTimeMs = threadedRun?.executionTimeMs ?? null;
 
   return {
     totalSolutions,
     recognizedCount,
-    sequentialTimeMs: latestRun?.sequentialTimeMs ?? null,
-    threadedTimeMs: latestRun?.threadedTimeMs ?? null,
-    lastComputedAt: latestRun?.computedAt ?? null,
-    solutions: sampleSolutions.map(s => s.positions),
+    sequentialTimeMs,
+    threadedTimeMs,
+    lastComputedAt: latestRun?.createdAt ?? null,
+    solutions: sampleSolutions.map((s) => s.solution),
   };
 }
 
@@ -118,62 +175,100 @@ async function submitSolution(playerId, playerName, positions, algorithmTimes = 
 
   await ensureSolutionsSeeded();
   const solutionKey = normalizeSolution(positions);
-  const solution = await QueenSolution.findOne({ solutionKey });
+  const solution = await ReferenceSolution.findOne({
+    where: { gameType: "queens", solutionKey },
+  });
+
+  // Create game round for this submission
+  const gameRound = await GameRound.create({
+    playerId,
+    playerName: playerName.trim(),
+    gameType: "queens",
+    gameConfig: { solution: positions },
+  });
+
+  // Store algorithm runs
+  if (algorithmTimes.sequential) {
+    await AlgorithmRun.create({
+      gameRoundId: gameRound.id,
+      algorithmName: "Sequential",
+      executionTimeMs: algorithmTimes.sequential,
+    });
+  }
+  if (algorithmTimes.threaded) {
+    await AlgorithmRun.create({
+      gameRoundId: gameRound.id,
+      algorithmName: "Threaded",
+      executionTimeMs: algorithmTimes.threaded,
+    });
+  }
 
   if (!solution) {
-    // Save incorrect attempt as game result
-    await GameResult.create({
+    // Save incorrect attempt
+    await PlayerSubmission.create({
+      gameRoundId: gameRound.id,
       playerId,
-      playerName: playerName.trim(),
-      gameType: "queens",
-      score: 0,
+      playerAnswer: { solution: positions },
       isCorrect: false,
-      gameData: { solution: positions },
-      algorithmTimes,
+      score: 0,
+      submissionMetadata: { reason: "incorrect" },
     });
-    
+
     throw new ErrorResponse("Incorrect solution. Try again.", 400);
   }
 
   if (solution.recognized) {
     // Save duplicate attempt
-    await GameResult.create({
+    await PlayerSubmission.create({
+      gameRoundId: gameRound.id,
       playerId,
-      playerName: playerName.trim(),
-      gameType: "queens",
-      score: 0,
+      playerAnswer: { solution: positions },
       isCorrect: false,
-      gameData: { solution: positions, reason: "duplicate" },
-      algorithmTimes,
+      score: 0,
+      submissionMetadata: { reason: "duplicate" },
     });
-    
+
     return {
       status: "duplicate",
       message: "This correct solution was already recognized. Try another one.",
     };
   }
 
+  // Mark solution as recognized
   solution.recognized = true;
   solution.recognizedBy = playerName.trim();
   solution.recognizedAt = new Date();
   await solution.save();
 
-  // Save successful game result
-  await GameResult.create({
+  // Save successful submission
+  await PlayerSubmission.create({
+    gameRoundId: gameRound.id,
     playerId,
-    playerName: playerName.trim(),
-    gameType: "queens",
-    score: 1, // 1 point for correct solution
+    playerAnswer: { solution: positions, solutionKey },
     isCorrect: true,
-    gameData: { solution: positions, solutionKey },
-    algorithmTimes,
+    score: 1,
+    submissionMetadata: { solutionKey },
   });
 
-  const totalSolutions = await QueenSolution.estimatedDocumentCount();
-  const recognizedCount = await QueenSolution.countDocuments({ recognized: true });
+  const totalSolutions = await ReferenceSolution.count({
+    where: { gameType: "queens" },
+  });
+  const recognizedCount = await ReferenceSolution.count({
+    where: { gameType: "queens", recognized: true },
+  });
 
   if (recognizedCount === totalSolutions) {
-    await QueenSolution.updateMany({}, { $set: { recognized: false, recognizedBy: null, recognizedAt: null } });
+    // Reset all solutions
+    await ReferenceSolution.update(
+      {
+        recognized: false,
+        recognizedBy: null,
+        recognizedAt: null,
+      },
+      {
+        where: { gameType: "queens" },
+      }
+    );
     return {
       status: "completed",
       message:
@@ -195,4 +290,3 @@ module.exports = {
   isValidPositions,
   normalizeSolution,
 };
-

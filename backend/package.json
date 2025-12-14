@@ -16,10 +16,12 @@
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "jest": "^30.2.0",
-    "mongoose": "^9.0.0",
+    "mysql2": "^3.11.5",
+    "sequelize": "^6.37.3",
     "supertest": "^7.1.4"
   },
   "devDependencies": {
+    "axios": "^1.13.2",
     "nodemon": "^3.1.11"
   }
 }

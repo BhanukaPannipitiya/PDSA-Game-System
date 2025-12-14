@@ -1,6 +1,11 @@
 const Success = require("../../utils/successResponse");
 const ErrorResponse = require("../../utils/errorHandler");
-const GameResult = require("../../models/gameResultModel");
+const {
+  GameRound,
+  AlgorithmRun,
+  PlayerSubmission,
+  ReferenceSolution,
+} = require("../../models");
 const service = require("../../services/games/tspService");
 
 /**
@@ -62,9 +67,7 @@ exports.solveTSP = async (req, res, next) => {
 
     // Validate home city is not in cities to visit
     if (citiesToVisit.includes(homeCity)) {
-      return next(
-        new ErrorResponse("Home city cannot be in cities to visit", 400)
-      );
+      return next(new ErrorResponse("Home city cannot be in cities to visit", 400));
     }
 
     // Solve TSP using all three algorithms
@@ -145,34 +148,21 @@ exports.submitAnswer = async (req, res, next) => {
       selectedRoute[0] !== homeCity ||
       selectedRoute[selectedRoute.length - 1] !== homeCity
     ) {
-      return next(
-        new ErrorResponse(
-          "Route must start and end with the home city",
-          400
-        )
-      );
+      return next(new ErrorResponse("Route must start and end with the home city", 400));
     }
 
     // Validate all cities to visit are in the route
     const routeSet = new Set(selectedRoute.slice(1, -1)); // Exclude first and last (home city)
     const citiesSet = new Set(citiesToVisit);
-    
+
     if (citiesSet.size !== routeSet.size) {
-      return next(
-        new ErrorResponse(
-          "Route must visit exactly the selected cities",
-          400
-        )
-      );
+      return next(new ErrorResponse("Route must visit exactly the selected cities", 400));
     }
 
     for (const city of citiesSet) {
       if (!routeSet.has(city)) {
         return next(
-          new ErrorResponse(
-            `Route must visit all selected cities. Missing: ${city}`,
-            400
-          )
+          new ErrorResponse(`Route must visit all selected cities. Missing: ${city}`, 400)
         );
       }
     }
@@ -180,25 +170,64 @@ exports.submitAnswer = async (req, res, next) => {
     // Check if answer is correct (allow small tolerance for floating point)
     const isCorrect = Math.abs(selectedNum - correctNum) < 0.01;
 
-    // Save to database
-    await GameResult.create({
+    // Create game round
+    const gameRound = await GameRound.create({
       playerId,
       playerName: playerName.trim(),
       gameType: "tsp",
-      score: isCorrect ? 1 : 0,
-      isCorrect,
-      gameData: {
+      gameConfig: {
+        homeCity,
+        citiesToVisit,
+      },
+    });
+
+    // Store reference solution
+    await ReferenceSolution.create({
+      gameRoundId: gameRound.id,
+      gameType: "tsp",
+      solution: {
+        correctDistance: correctNum,
+      },
+    });
+
+    // Store algorithm runs
+    if (algorithmTimes.bruteForce) {
+      await AlgorithmRun.create({
+        gameRoundId: gameRound.id,
+        algorithmName: "Brute Force",
+        executionTimeMs: algorithmTimes.bruteForce || null,
+      });
+    }
+
+    if (algorithmTimes.nearestNeighbor) {
+      await AlgorithmRun.create({
+        gameRoundId: gameRound.id,
+        algorithmName: "Nearest Neighbor",
+        executionTimeMs: algorithmTimes.nearestNeighbor || null,
+      });
+    }
+
+    if (algorithmTimes.dynamicProgramming) {
+      await AlgorithmRun.create({
+        gameRoundId: gameRound.id,
+        algorithmName: "Dynamic Programming",
+        executionTimeMs: algorithmTimes.dynamicProgramming || null,
+      });
+    }
+
+    // Save player submission
+    await PlayerSubmission.create({
+      gameRoundId: gameRound.id,
+      playerId,
+      playerAnswer: {
         homeCity,
         citiesToVisit,
         selectedRoute,
         selectedDistance: selectedNum,
         correctDistance: correctNum,
       },
-      algorithmTimes: {
-        bruteForce: algorithmTimes.bruteForce || null,
-        nearestNeighbor: algorithmTimes.nearestNeighbor || null,
-        dynamicProgramming: algorithmTimes.dynamicProgramming || null,
-      },
+      isCorrect,
+      score: isCorrect ? 1 : 0,
     });
 
     // Determine result
@@ -216,10 +245,10 @@ exports.submitAnswer = async (req, res, next) => {
       playerDistance: selectedNum,
     });
   } catch (err) {
-    if (err.name === "ValidationError") {
+    if (err.name === "SequelizeValidationError") {
       return next(new ErrorResponse(`Validation error: ${err.message}`, 400));
     }
-    if (err.name === "CastError") {
+    if (err.name === "SequelizeDatabaseError") {
       return next(new ErrorResponse(`Invalid data format: ${err.message}`, 400));
     }
     next(new ErrorResponse(`Error submitting answer: ${err.message}`, 500));
@@ -237,14 +266,25 @@ exports.getLeaderboard = async (req, res, next) => {
       return next(new ErrorResponse("Limit must be between 1 and 100", 400));
     }
 
-    const results = await GameResult.find({
-      gameType: "tsp",
-      isCorrect: true,
-    })
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .populate("playerId", "name")
-      .lean();
+    const results = await PlayerSubmission.findAll({
+      where: { isCorrect: true },
+      include: [
+        {
+          model: GameRound,
+          as: "gameRound",
+          where: { gameType: "tsp" },
+          include: [
+            {
+              model: require("../../models").Player,
+              as: "player",
+              attributes: ["id", "name"],
+            },
+          ],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+      limit,
+    });
 
     return Success(res, results);
   } catch (err) {

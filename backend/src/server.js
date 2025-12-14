@@ -2,7 +2,7 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const hanoiRoute = require('./routes/games/hanoiRoute');
-const connectDB = require("./config/db");
+const { connectDB } = require("./config/db");
 
 const app = express();
 

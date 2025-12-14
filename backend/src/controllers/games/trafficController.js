@@ -1,6 +1,11 @@
 const Success = require("../../utils/successResponse");
 const ErrorResponse = require("../../utils/errorHandler");
-const GameResult = require("../../models/gameResultModel");
+const {
+  GameRound,
+  AlgorithmRun,
+  PlayerSubmission,
+  ReferenceSolution,
+} = require("../../models");
 const service = require("../../services/games/trafficService");
 
 /**
@@ -47,13 +52,7 @@ exports.startGame = async (req, res, next) => {
  */
 exports.submitAnswer = async (req, res, next) => {
   try {
-    const {
-      playerId,
-      playerName,
-      selectedAnswer,
-      correctAnswer,
-      algoTimes,
-    } = req.body;
+    const { playerId, playerName, selectedAnswer, correctAnswer, algoTimes } = req.body;
 
     // Validation
     if (!playerId) {
@@ -86,21 +85,48 @@ exports.submitAnswer = async (req, res, next) => {
 
     const isCorrect = selectedNum === correctNum;
 
-    // Save to database
-    await GameResult.create({
+    // Create game round
+    const gameRound = await GameRound.create({
       playerId,
       playerName: playerName.trim(),
       gameType: "traffic",
-      score: isCorrect ? 1 : 0,
-      isCorrect,
-      gameData: {
+      gameConfig: {
+        correctAnswer: correctNum,
+      },
+    });
+
+    // Store reference solution
+    await ReferenceSolution.create({
+      gameRoundId: gameRound.id,
+      gameType: "traffic",
+      solution: {
+        correctAnswer: correctNum,
+      },
+    });
+
+    // Store algorithm runs
+    await AlgorithmRun.create({
+      gameRoundId: gameRound.id,
+      algorithmName: "Edmonds-Karp",
+      executionTimeMs: algoTimes.edmondsKarp || 0,
+    });
+
+    await AlgorithmRun.create({
+      gameRoundId: gameRound.id,
+      algorithmName: "Ford-Fulkerson",
+      executionTimeMs: algoTimes.fordFulkerson || 0,
+    });
+
+    // Save player submission
+    await PlayerSubmission.create({
+      gameRoundId: gameRound.id,
+      playerId,
+      playerAnswer: {
         selectedAnswer: selectedNum,
         correctAnswer: correctNum,
       },
-      algorithmTimes: {
-        edmondsKarp: algoTimes.edmondsKarp || 0,
-        fordFulkerson: algoTimes.fordFulkerson || 0,
-      },
+      isCorrect,
+      score: isCorrect ? 1 : 0,
     });
 
     // Determine result
@@ -118,10 +144,10 @@ exports.submitAnswer = async (req, res, next) => {
       playerAnswer: selectedNum,
     });
   } catch (err) {
-    if (err.name === "ValidationError") {
+    if (err.name === "SequelizeValidationError") {
       return next(new ErrorResponse(`Validation error: ${err.message}`, 400));
     }
-    if (err.name === "CastError") {
+    if (err.name === "SequelizeDatabaseError") {
       return next(new ErrorResponse(`Invalid data format: ${err.message}`, 400));
     }
     next(new ErrorResponse(`Error submitting answer: ${err.message}`, 500));
@@ -139,14 +165,25 @@ exports.getLeaderboard = async (req, res, next) => {
       return next(new ErrorResponse("Limit must be between 1 and 100", 400));
     }
 
-    const results = await GameResult.find({
-      gameType: "traffic",
-      isCorrect: true,
-    })
-      .sort({ createdAt: -1 })
-      .limit(limit)
-      .populate("playerId", "name")
-      .lean();
+    const results = await PlayerSubmission.findAll({
+      where: { isCorrect: true },
+      include: [
+        {
+          model: GameRound,
+          as: "gameRound",
+          where: { gameType: "traffic" },
+          include: [
+            {
+              model: require("../../models").Player,
+              as: "player",
+              attributes: ["id", "name"],
+            },
+          ],
+        },
+      ],
+      order: [["createdAt", "DESC"]],
+      limit,
+    });
 
     return Success(res, results);
   } catch (err) {
