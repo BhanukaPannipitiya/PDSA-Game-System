@@ -1,4 +1,7 @@
 const tspService = require("../services/games/tspService");
+const { bruteForceTSP } = require("../algorithms/tsp/bruteForce");
+const { nearestNeighborTSP } = require("../algorithms/tsp/nearestNeighbor");
+const { dynamicProgrammingTSP } = require("../algorithms/tsp/dynamicProgramming");
 
 describe("TSP Service", () => {
   describe("City Generation", () => {
@@ -109,7 +112,7 @@ describe("TSP Service", () => {
         C: { A: 80, C: 0, B: 70 },
       };
       
-      const result = tspService.bruteForceTSP("A", ["B", "C"], distanceMatrix);
+      const result = bruteForceTSP("A", ["B", "C"], distanceMatrix);
       
       expect(result).toHaveProperty("route");
       expect(result).toHaveProperty("distance");
@@ -123,7 +126,7 @@ describe("TSP Service", () => {
         A: { A: 0 },
       };
       
-      const result = tspService.bruteForceTSP("A", [], distanceMatrix);
+      const result = bruteForceTSP("A", [], distanceMatrix);
       
       expect(result.route).toEqual(["A", "A"]);
       expect(result.distance).toBe(0);
@@ -139,7 +142,7 @@ describe("TSP Service", () => {
         D: { A: 90, D: 0, B: 70, C: 65 },
       };
       
-      const result = tspService.nearestNeighborTSP("A", ["B", "C", "D"], distanceMatrix);
+      const result = nearestNeighborTSP("A", ["B", "C", "D"], distanceMatrix);
       
       expect(result).toHaveProperty("route");
       expect(result).toHaveProperty("distance");
@@ -153,7 +156,7 @@ describe("TSP Service", () => {
         A: { A: 0 },
       };
       
-      const result = tspService.nearestNeighborTSP("A", [], distanceMatrix);
+      const result = nearestNeighborTSP("A", [], distanceMatrix);
       
       expect(result.route).toEqual(["A", "A"]);
       expect(result.distance).toBe(0);
@@ -166,7 +169,7 @@ describe("TSP Service", () => {
         C: { A: 80, C: 0, B: 70 },
       };
       
-      const result = tspService.nearestNeighborTSP("A", ["B", "C"], distanceMatrix);
+      const result = nearestNeighborTSP("A", ["B", "C"], distanceMatrix);
       const visitedCities = result.route.slice(1, -1); // Exclude home city at start and end
       
       expect(visitedCities).toContain("B");
@@ -183,7 +186,7 @@ describe("TSP Service", () => {
         C: { A: 80, C: 0, B: 70 },
       };
       
-      const result = tspService.dynamicProgrammingTSP("A", ["B", "C"], distanceMatrix);
+      const result = dynamicProgrammingTSP("A", ["B", "C"], distanceMatrix);
       
       expect(result).toHaveProperty("route");
       expect(result).toHaveProperty("distance");
@@ -197,7 +200,7 @@ describe("TSP Service", () => {
         A: { A: 0 },
       };
       
-      const result = tspService.dynamicProgrammingTSP("A", [], distanceMatrix);
+      const result = dynamicProgrammingTSP("A", [], distanceMatrix);
       
       expect(result.route).toEqual(["A", "A"]);
       expect(result.distance).toBe(0);
@@ -212,7 +215,7 @@ describe("TSP Service", () => {
         C: { A: 80, C: 0, B: 70 },
       };
       
-      const result = tspService.dynamicProgrammingTSP("A", ["B", "C"], distanceMatrix);
+      const result = dynamicProgrammingTSP("A", ["B", "C"], distanceMatrix);
       
       expect(result.distance).toBe(210);
     });
