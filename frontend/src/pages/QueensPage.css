@@ -243,6 +243,24 @@ html.queens-page-active {
   transform: scale(1.1);
 }
 
+.comparison-card {
+  background: linear-gradient(135deg, rgba(249, 203, 40, 0.1) 0%, rgba(255, 77, 77, 0.1) 100%);
+  border-color: rgba(249, 203, 40, 0.3);
+}
+
+.comparison-card .stat-value {
+  color: #F9CB28;
+  font-size: 2rem;
+}
+
+.stat-subtext {
+  font-size: 0.85rem;
+  color: #A0A0C0;
+  text-align: center;
+  margin-top: 0.5rem;
+  font-weight: 500;
+}
+
 .controls {
   display: flex;
   gap: 1.25rem;
@@ -700,6 +718,12 @@ html.queens-page-active {
   max-width: 600px;
   width: 100%;
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+  word-wrap: break-word;
+  line-height: 1.6;
+}
+
+.status-message.status-error {
+  animation: slideInShake 0.5s ease;
 }
 
 @keyframes slideIn {
@@ -713,6 +737,26 @@ html.queens-page-active {
   }
 }
 
+@keyframes slideInShake {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  20%, 60%, 100% {
+    transform: translateX(0);
+  }
+  40% {
+    transform: translateX(-10px);
+  }
+  80% {
+    transform: translateX(10px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) translateX(0);
+  }
+}
+
 .status-success {
   background: rgba(0, 255, 136, 0.1);
   border: 1px solid rgba(0, 255, 136, 0.3);
@@ -720,9 +764,11 @@ html.queens-page-active {
 }
 
 .status-error {
-  background: rgba(255, 0, 68, 0.1);
-  border: 1px solid rgba(255, 0, 68, 0.3);
+  background: rgba(255, 0, 68, 0.15);
+  border: 2px solid rgba(255, 0, 68, 0.4);
   color: #FF0044;
+  box-shadow: 0 4px 20px rgba(255, 0, 68, 0.2);
+  font-weight: 600;
 }
 
 .status-info {
@@ -732,9 +778,11 @@ html.queens-page-active {
 }
 
 .status-warning {
-  background: rgba(255, 165, 0, 0.1);
-  border: 1px solid rgba(255, 165, 0, 0.3);
+  background: rgba(255, 165, 0, 0.15);
+  border: 2px solid rgba(255, 165, 0, 0.4);
   color: #FFA500;
+  box-shadow: 0 4px 20px rgba(255, 165, 0, 0.2);
+  font-weight: 600;
 }
 
 @media (max-width: 768px) {

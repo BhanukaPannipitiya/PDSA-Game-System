@@ -34,6 +34,13 @@ describe("Queens Controller", () => {
         threadedTimeMs: 8.2,
         totalSolutions: 92,
         runId: "run123",
+        comparison: {
+          fasterAlgorithm: "Threaded",
+          timeDifference: "2.3000",
+          speedup: "1.28",
+          sequentialSolutions: 92,
+          threadedSolutions: 92,
+        },
       };
 
       queensService.computeAndPersistRun.mockResolvedValue(mockResult);
@@ -66,10 +73,16 @@ describe("Queens Controller", () => {
       const mockStats = {
         totalSolutions: 92,
         recognizedCount: 5,
+        remainingSolutions: 87,
         sequentialTimeMs: 10.5,
         threadedTimeMs: 8.2,
         lastComputedAt: new Date(),
         solutions: [[0, 4, 7, 5, 2, 6, 1, 3]],
+        comparison: {
+          fasterAlgorithm: "Threaded",
+          timeDifference: "2.3000",
+          speedup: "1.28",
+        },
       };
 
       queensService.getStats.mockResolvedValue(mockStats);
@@ -177,6 +190,39 @@ describe("Queens Controller", () => {
       expect(success).not.toHaveBeenCalled();
     });
 
+    test("should handle invalid solution format", async () => {
+      mockReq.body = {
+        playerId: "player123",
+        playerName: "Test Player",
+        solution: "not an array",
+      };
+
+      await queensController.submitQueensSolution(mockReq, mockRes, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(
+        expect.any(ErrorResponse)
+      );
+      expect(queensService.submitSolution).not.toHaveBeenCalled();
+      expect(success).not.toHaveBeenCalled();
+    });
+
+    test("should handle invalid algorithmTimes format", async () => {
+      mockReq.body = {
+        playerId: "player123",
+        playerName: "Test Player",
+        solution: [0, 4, 7, 5, 2, 6, 1, 3],
+        algorithmTimes: "not an object",
+      };
+
+      await queensController.submitQueensSolution(mockReq, mockRes, mockNext);
+
+      expect(mockNext).toHaveBeenCalledWith(
+        expect.any(ErrorResponse)
+      );
+      expect(queensService.submitSolution).not.toHaveBeenCalled();
+      expect(success).not.toHaveBeenCalled();
+    });
+
     test("should handle optional algorithmTimes", async () => {
       const mockResult = {
         status: "accepted",
@@ -228,6 +274,31 @@ describe("Queens Controller", () => {
       const mockResult = {
         status: "completed",
         message: "Congratulations! All solutions were identified. The slate has been cleared for the next round.",
+        totalSolutions: 92,
+        recognizedCount: 92,
+      };
+
+      mockReq.body = mockValidBody;
+      queensService.submitSolution.mockResolvedValue(mockResult);
+      success.mockReturnValue(mockRes);
+
+      await queensController.submitQueensSolution(mockReq, mockRes, mockNext);
+
+      expect(success).toHaveBeenCalledWith(
+        mockRes,
+        mockResult,
+        "Submission processed."
+      );
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+
+    test("should handle accepted solution with remaining count", async () => {
+      const mockResult = {
+        status: "accepted",
+        message: "Correct! Your solution has been recorded.",
+        remaining: 87,
+        totalSolutions: 92,
+        recognizedCount: 5,
       };
 
       mockReq.body = mockValidBody;

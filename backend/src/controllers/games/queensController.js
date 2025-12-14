@@ -23,10 +23,29 @@ const getQueensStats = async (req, res, next) => {
 const submitQueensSolution = async (req, res, next) => {
   try {
     const { playerId, playerName, solution, algorithmTimes } = req.body;
-    if (!playerId || !playerName || !solution) {
-      throw new ErrorResponse("playerId, playerName, and solution are required", 400);
+
+    // Validate required fields
+    if (!playerId) {
+      throw new ErrorResponse("playerId is required", 400);
     }
-    const result = await submitSolution(playerId, playerName, solution, algorithmTimes);
+    if (!playerName) {
+      throw new ErrorResponse("playerName is required", 400);
+    }
+    if (!solution) {
+      throw new ErrorResponse("solution is required", 400);
+    }
+
+    // Validate solution is an array
+    if (!Array.isArray(solution)) {
+      throw new ErrorResponse("solution must be an array of 8 integers", 400);
+    }
+
+    // Validate algorithmTimes if provided
+    if (algorithmTimes !== undefined && typeof algorithmTimes !== "object") {
+      throw new ErrorResponse("algorithmTimes must be an object", 400);
+    }
+
+    const result = await submitSolution(playerId, playerName, solution, algorithmTimes || {});
     return success(res, result, "Submission processed.");
   } catch (error) {
     return next(error);
