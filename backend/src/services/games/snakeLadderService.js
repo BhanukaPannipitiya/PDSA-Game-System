@@ -1,4 +1,4 @@
-const { performance } = require("perf_hooks");
+const { solveBoard } = require("../../algorithms/snakeLadder/solveBoard");
 
 class SnakeLadderService {
 
@@ -69,128 +69,8 @@ class SnakeLadderService {
     return { snakes, ladders };
   }
 
-  // BFS Algorithm
-  bfs(minBoard, totalCells) {
-    const queue = [{ cell: 1, dist: 0 }];
-    const visited = Array(totalCells + 1).fill(false);
-    visited[1] = true;
-
-    while (queue.length) {
-      const { cell, dist } = queue.shift();
-
-      if (cell === totalCells) return dist;
-
-      for (let dice = 1; dice <= 6; dice++) {
-        let next = cell + dice;
-
-        if (next > totalCells) continue;
-
-        if (minBoard[next]) {
-          next = minBoard[next];
-        }
-
-        if (!visited[next]) {
-          visited[next] = true;
-          queue.push({ cell: next, dist: dist + 1 });
-        }
-      }
-    }
-    return -1;
-  }
-
-  // Bidirectional BFS
-  biBfs(minBoard, totalCells) {
-    if (1 === totalCells) return 0;
-
-    // Build adjacency list in reverse: for each cell, which cells can reach it
-    const canReach = {};
-    for (let i = 1; i <= totalCells; i++) {
-      canReach[i] = [];
-    }
-
-    // For each position, find all positions that can reach it
-    for (let from = 1; from < totalCells; from++) {
-      for (let dice = 1; dice <= 6; dice++) {
-        let to = from + dice;
-        if (to > totalCells) break;
-        let finalTo = minBoard[to] || to;
-        if (finalTo !== from && !canReach[finalTo].includes(from)) {
-          canReach[finalTo].push(from);
-        }
-      }
-    }
-
-    let forwardQueue = [1];
-    let backwardQueue = [totalCells];
-    let forwardVisited = new Set([1]);
-    let backwardVisited = new Set([totalCells]);
-    let forwardDist = { 1: 0 };
-    let backwardDist = { [totalCells]: 0 };
-    let moves = 0;
-
-    while (forwardQueue.length > 0 && backwardQueue.length > 0) {
-      // Expand forward
-      let nextForwardQueue = [];
-      for (let pos of forwardQueue) {
-        for (let dice = 1; dice <= 6; dice++) {
-          let next = pos + dice;
-          if (next > totalCells) break;
-          let finalPos = minBoard[next] || next;
-
-          if (backwardVisited.has(finalPos)) {
-            return forwardDist[pos] + 1 + backwardDist[finalPos];
-          }
-
-          if (!forwardVisited.has(finalPos)) {
-            forwardVisited.add(finalPos);
-            forwardDist[finalPos] = forwardDist[pos] + 1;
-            nextForwardQueue.push(finalPos);
-          }
-        }
-      }
-      forwardQueue = nextForwardQueue;
-
-      // Expand backward
-      let nextBackwardQueue = [];
-      for (let pos of backwardQueue) {
-        for (let prev of canReach[pos] || []) {
-          if (forwardVisited.has(prev)) {
-            return forwardDist[prev] + backwardDist[pos] + 1;
-          }
-
-          if (!backwardVisited.has(prev)) {
-            backwardVisited.add(prev);
-            backwardDist[prev] = backwardDist[pos] + 1;
-            nextBackwardQueue.push(prev);
-          }
-        }
-      }
-      backwardQueue = nextBackwardQueue;
-    }
-
-    return -1;
-  }
-
   solveBoard(snakes, ladders, N) {
-    const totalCells = N * N;
-
-    const minBoard = {};
-    Object.assign(minBoard, snakes, ladders);
-
-    const start1 = performance.now();
-    const bfsResult = this.bfs(minBoard, totalCells);
-    const end1 = performance.now();
-
-    const start2 = performance.now();
-    const biResult = this.biBfs(minBoard, totalCells);
-    const end2 = performance.now();
-
-    return {
-      bfs: bfsResult,
-      bfsTime: end1 - start1,
-      biBfs: biResult,
-      biTime: end2 - start2
-    };
+    return solveBoard(snakes, ladders, N);
   }
 
 }
