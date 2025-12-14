@@ -1,4 +1,7 @@
 const { performance } = require("perf_hooks");
+const { bruteForceTSP } = require("../../algorithms/tsp/bruteForce");
+const { nearestNeighborTSP } = require("../../algorithms/tsp/nearestNeighbor");
+const { dynamicProgrammingTSP } = require("../../algorithms/tsp/dynamicProgramming");
 
 class TSPService {
   /**
@@ -56,212 +59,6 @@ class TSPService {
   }
 
   /**
-   * Algorithm 1: Brute Force (O(n!))
-   * Tries all possible permutations to find the shortest route
-   * @param {string} homeCity - Starting and ending city
-   * @param {Array} citiesToVisit - Cities to visit
-   * @param {Object} distanceMatrix - Distance matrix
-   * @returns {Object} Shortest route and distance
-   */
-  bruteForceTSP(homeCity, citiesToVisit, distanceMatrix) {
-    if (citiesToVisit.length === 0) {
-      return {
-        route: [homeCity, homeCity],
-        distance: 0,
-      };
-    }
-
-    // Generate all permutations of cities to visit
-    const permutations = this.generatePermutations(citiesToVisit);
-    let shortestDistance = Infinity;
-    let shortestRoute = null;
-
-    for (const perm of permutations) {
-      const route = [homeCity, ...perm, homeCity];
-      const distance = this.calculateRouteDistance(route, distanceMatrix);
-      
-      if (distance < shortestDistance) {
-        shortestDistance = distance;
-        shortestRoute = route;
-      }
-    }
-
-    return {
-      route: shortestRoute,
-      distance: shortestDistance,
-    };
-  }
-
-  /**
-   * Generate all permutations of an array
-   * @param {Array} arr - Array to permute
-   * @returns {Array} Array of all permutations
-   */
-  generatePermutations(arr) {
-    if (arr.length <= 1) return [arr];
-    
-    const result = [];
-    for (let i = 0; i < arr.length; i++) {
-      const rest = [...arr.slice(0, i), ...arr.slice(i + 1)];
-      const perms = this.generatePermutations(rest);
-      for (const perm of perms) {
-        result.push([arr[i], ...perm]);
-      }
-    }
-    return result;
-  }
-
-  /**
-   * Algorithm 2: Nearest Neighbor (O(n²))
-   * Greedy heuristic that always visits the nearest unvisited city
-   * @param {string} homeCity - Starting and ending city
-   * @param {Array} citiesToVisit - Cities to visit
-   * @param {Object} distanceMatrix - Distance matrix
-   * @returns {Object} Route and distance
-   */
-  nearestNeighborTSP(homeCity, citiesToVisit, distanceMatrix) {
-    if (citiesToVisit.length === 0) {
-      return {
-        route: [homeCity, homeCity],
-        distance: 0,
-      };
-    }
-
-    const route = [homeCity];
-    const unvisited = new Set(citiesToVisit);
-    let currentCity = homeCity;
-
-    while (unvisited.size > 0) {
-      let nearestCity = null;
-      let nearestDistance = Infinity;
-
-      for (const city of unvisited) {
-        const distance = distanceMatrix[currentCity][city];
-        if (distance < nearestDistance) {
-          nearestDistance = distance;
-          nearestCity = city;
-        }
-      }
-
-      if (nearestCity) {
-        route.push(nearestCity);
-        unvisited.delete(nearestCity);
-        currentCity = nearestCity;
-      }
-    }
-
-    route.push(homeCity);
-    const distance = this.calculateRouteDistance(route, distanceMatrix);
-
-    return {
-      route,
-      distance,
-    };
-  }
-
-  /**
-   * Algorithm 3: Dynamic Programming with Bitmasking (O(2^n * n²))
-   * Optimal solution using DP to avoid recalculating subproblems
-   * @param {string} homeCity - Starting and ending city
-   * @param {Array} citiesToVisit - Cities to visit
-   * @param {Object} distanceMatrix - Distance matrix
-   * @returns {Object} Shortest route and distance
-   */
-  dynamicProgrammingTSP(homeCity, citiesToVisit, distanceMatrix) {
-    if (citiesToVisit.length === 0) {
-      return {
-        route: [homeCity, homeCity],
-        distance: 0,
-      };
-    }
-
-    const n = citiesToVisit.length;
-    const cityIndex = {};
-    citiesToVisit.forEach((city, idx) => {
-      cityIndex[city] = idx;
-    });
-
-    // dp[mask][lastCity] = minimum distance to visit all cities in mask ending at lastCity
-    const dp = {};
-    const parent = {};
-
-    // Initialize: starting from homeCity to each city
-    for (let i = 0; i < n; i++) {
-      const mask = 1 << i;
-      const city = citiesToVisit[i];
-      dp[`${mask},${city}`] = distanceMatrix[homeCity][city];
-      parent[`${mask},${city}`] = homeCity;
-    }
-
-    // Fill DP table
-    for (let mask = 1; mask < (1 << n); mask++) {
-      for (let i = 0; i < n; i++) {
-        if (!(mask & (1 << i))) continue;
-
-        const cityI = citiesToVisit[i];
-        const prevMask = mask ^ (1 << i);
-
-        if (prevMask === 0) continue;
-
-        for (let j = 0; j < n; j++) {
-          if (!(prevMask & (1 << j))) continue;
-
-          const cityJ = citiesToVisit[j];
-          const key = `${prevMask},${cityJ}`;
-          const newKey = `${mask},${cityI}`;
-
-          if (dp[key] !== undefined) {
-            const newDist = dp[key] + distanceMatrix[cityJ][cityI];
-            
-            if (dp[newKey] === undefined || newDist < dp[newKey]) {
-              dp[newKey] = newDist;
-              parent[newKey] = cityJ;
-            }
-          }
-        }
-      }
-    }
-
-    // Find minimum distance to return to homeCity
-    const fullMask = (1 << n) - 1;
-    let minDistance = Infinity;
-    let lastCity = null;
-
-    for (let i = 0; i < n; i++) {
-      const city = citiesToVisit[i];
-      const key = `${fullMask},${city}`;
-      if (dp[key] !== undefined) {
-        const totalDist = dp[key] + distanceMatrix[city][homeCity];
-        if (totalDist < minDistance) {
-          minDistance = totalDist;
-          lastCity = city;
-        }
-      }
-    }
-
-    // Reconstruct route
-    const route = [homeCity];
-    let currentMask = fullMask;
-    let currentCity = lastCity;
-
-    while (currentCity !== homeCity) {
-      route.push(currentCity);
-      const key = `${currentMask},${currentCity}`;
-      const prevCity = parent[key];
-      currentMask = currentMask ^ (1 << cityIndex[currentCity]);
-      currentCity = prevCity;
-    }
-
-    route.push(homeCity);
-    route.reverse();
-
-    return {
-      route,
-      distance: minDistance,
-    };
-  }
-
-  /**
    * Solve TSP using all three algorithms and measure execution time
    * @param {string} homeCity - Starting and ending city
    * @param {Array} citiesToVisit - Cities selected by user
@@ -299,7 +96,7 @@ class TSPService {
     // Only use for small problems (n <= 7) to avoid performance issues
     if (uniqueCities.length <= 7) {
       const start1 = performance.now();
-      const bruteForceResult = this.bruteForceTSP(homeCity, uniqueCities, distanceMatrix);
+      const bruteForceResult = bruteForceTSP(homeCity, uniqueCities, distanceMatrix);
       const end1 = performance.now();
       results.bruteForce = {
         ...bruteForceResult,
@@ -316,7 +113,7 @@ class TSPService {
 
     // Algorithm 2: Nearest Neighbor
     const start2 = performance.now();
-    const nearestNeighborResult = this.nearestNeighborTSP(homeCity, uniqueCities, distanceMatrix);
+    const nearestNeighborResult = nearestNeighborTSP(homeCity, uniqueCities, distanceMatrix);
     const end2 = performance.now();
     results.nearestNeighbor = {
       ...nearestNeighborResult,
@@ -327,7 +124,7 @@ class TSPService {
     // Only use for medium problems (n <= 15) due to memory constraints
     if (uniqueCities.length <= 15) {
       const start3 = performance.now();
-      const dpResult = this.dynamicProgrammingTSP(homeCity, uniqueCities, distanceMatrix);
+      const dpResult = dynamicProgrammingTSP(homeCity, uniqueCities, distanceMatrix);
       const end3 = performance.now();
       results.dynamicProgramming = {
         ...dpResult,
