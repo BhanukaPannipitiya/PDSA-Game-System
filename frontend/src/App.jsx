@@ -1,10 +1,115 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import GameMenu from "./components/GameMenu";
+import LoginSignup from "./components/LoginSignup";
+import QueensPage from "./pages/QueensPage";
+import TrafficPage from "./pages/TrafficPage";
+import TspPage from "./pages/TspPage";
+import "./App.css";
+import SnakeLadderPage from "./pages/SnakeLadderPage";
+import TowerOfHanoi from "./pages/TowerOfHanoi";
 
 function App() {
+  const [hash, setHash] = useState(
+    typeof window !== "undefined" ? window.location.hash : ""
+  );
+
+  // Use lazy initialization to read from localStorage without effect
+  const [player, setPlayer] = useState(() => {
+    if (typeof window === "undefined") return null;
+    const storedPlayer = localStorage.getItem("player");
+    if (storedPlayer) {
+      try {
+        return JSON.parse(storedPlayer);
+        // eslint-disable-next-line no-unused-vars
+      } catch (e) {
+        localStorage.removeItem("player");
+        return null;
+      }
+    }
+    return null;
+  });
+
+  const [currentGame, setCurrentGame] = useState(null);
+
+  useEffect(() => {
+    const onHashChange = () => setHash(window.location.hash);
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
+  const handleLogin = (playerData) => {
+    setPlayer(playerData);
+    localStorage.setItem("player", JSON.stringify(playerData));
+    // Clear any hash route and reset current game to show menu
+    setCurrentGame(null);
+    window.location.hash = "";
+  };
+
+  const handleLogout = () => {
+    setPlayer(null);
+    localStorage.removeItem("player");
+    setCurrentGame(null);
+    window.location.hash = "";
+  };
+
+  const handleGameSelect = (gameType) => {
+    setCurrentGame(gameType);
+    if (gameType === "queens") {
+      window.location.hash = "#/queens";
+    } else if (gameType === "snake-ladder") {
+      window.location.hash = "#/snake-ladder";
+    } else if (gameType === "tower-of-hanoi") {
+      window.location.hash = "#/tower-of-hanoi";
+    } else if (gameType === "traffic") {
+      window.location.hash = "#/traffic";
+    } else if (gameType === "tsp") {
+      window.location.hash = "#/tsp";
+    }
+  };
+
+  const handleBackToMenu = () => {
+    setCurrentGame(null);
+    window.location.hash = "";
+  };
+
+  // Show login if not authenticated
+  if (!player) {
+    return <LoginSignup onLogin={handleLogin} />;
+  }
+
+  // Show game based on route or current game
+  if (hash === "#/queens" || currentGame === "queens") {
+    return <QueensPage player={player} onBack={handleBackToMenu} />;
+  }
+
+  if (hash === "#/traffic" || currentGame === "traffic") {
+    return <TrafficPage player={player} onBack={handleBackToMenu} />;
+  }
+
+  if (hash === "#/snake-ladder" || currentGame === "snake-ladder") {
+    return <SnakeLadderPage player={player} onBack={handleBackToMenu} />;
+  }
+
+  if (hash === "#/tower-of-hanoi" || currentGame === "tower-of-hanoi") {
+    return <TowerOfHanoi player={player} onBack={handleBackToMenu} />;
+  }
+
+  if (hash === "#/tsp" || currentGame === "tsp") {
+    return <TspPage player={player} onBack={handleBackToMenu} />;
+  }
+
+  // Show game menu
   return (
-    <div>
-      <GameMenu />
+    <div className="main-page">
+      <div className="app-header">
+        <div className="player-info-header">
+          <span>👤 {player.name}</span>
+          <button onClick={handleLogout} className="logout-btn">
+            Logout
+          </button>
+        </div>
+      </div>
+      <GameMenu onGameSelect={handleGameSelect} />
     </div>
   );
 }

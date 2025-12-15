@@ -3,8 +3,8 @@ backend/node_modules
 frontend/node_modules
 
 # Environment files
-backend/.env
-frontend/.env
+# backend/.env
+# frontend/.env
 
 # Build files
 frontend/dist
