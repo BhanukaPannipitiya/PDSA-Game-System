@@ -5,7 +5,8 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "jest"
+    "test": "jest",
+    "generate-rounds": "node generate-15-rounds.js"
   },
   "keywords": [],
   "author": "",
@@ -21,6 +22,7 @@
     "supertest": "^7.1.4"
   },
   "devDependencies": {
+    "@jest/test-sequencer": "^30.2.0",
     "axios": "^1.13.2",
     "nodemon": "^3.1.11"
   }

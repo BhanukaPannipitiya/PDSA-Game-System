@@ -45,7 +45,7 @@ const submitQueensSolution = async (req, res, next) => {
       throw new ErrorResponse("algorithmTimes must be an object", 400);
     }
 
-    const result = await submitSolution(playerId, playerName, solution, algorithmTimes || {});
+    const result = await submitSolution(playerId, playerName, solution, algorithmTimes);
     return success(res, result, "Submission processed.");
   } catch (error) {
     return next(error);

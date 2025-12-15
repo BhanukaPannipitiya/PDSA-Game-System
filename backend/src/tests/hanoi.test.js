@@ -3,7 +3,7 @@ const {
   iterative3Pegs,
   frameStewart4Pegs,
   calculateMinMoves
-} = require('../utils/hanoiAlgorithms');
+} = require('../services/games/hanoiService');
 
 describe('Tower of Hanoi Algorithms', () => {
   

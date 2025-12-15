@@ -1,4 +1,6 @@
 const { solveBoard } = require("../../algorithms/snakeLadder/solveBoard");
+const { bfs } = require("../../algorithms/snakeLadder/bfs");
+const { biBfs } = require("../../algorithms/snakeLadder/biBfs");
 
 class SnakeLadderService {
 
@@ -71,6 +73,15 @@ class SnakeLadderService {
 
   solveBoard(snakes, ladders, N) {
     return solveBoard(snakes, ladders, N);
+  }
+
+  // Expose algorithms for direct unit testing
+  bfs(minBoard, totalCells) {
+    return bfs(minBoard, totalCells);
+  }
+
+  biBfs(minBoard, totalCells) {
+    return biBfs(minBoard, totalCells);
   }
 
 }

@@ -1,3 +1,31 @@
+// Mock SQL models used by queensService to avoid real DB access
+jest.mock("../models", () => {
+  const fn = () => jest.fn();
+  return {
+    ReferenceSolution: {
+      count: jest.fn(),
+      findOrCreate: jest.fn(),
+      findAll: jest.fn(),
+      findOne: jest.fn(),
+      update: jest.fn(),
+    },
+    GameRound: {
+      create: jest.fn(),
+    },
+    AlgorithmRun: {
+      create: jest.fn(),
+      findOne: jest.fn(),
+    },
+    PlayerSubmission: {
+      create: jest.fn(),
+    },
+    Player: {
+      findOne: jest.fn(),
+      create: jest.fn(),
+    },
+  };
+});
+
 const queensService = require("../services/games/queensService");
 const QueenSolution = require("../models/queenSolutionModel");
 const QueenRun = require("../models/queenRunModel");
@@ -17,6 +45,19 @@ const { solveEightQueensThreaded } = require("../algorithms/queens/threadedSolve
 describe("Queens Service", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    // Ensure stubbed mongoose models expose jest fns for each test
+    QueenSolution.countDocuments = jest.fn();
+    QueenSolution.findOne = jest.fn();
+    QueenSolution.estimatedDocumentCount = jest.fn();
+    QueenSolution.updateMany = jest.fn();
+    QueenSolution.find = jest.fn();
+    QueenSolution.bulkWrite = jest.fn();
+    QueenSolution.create = jest.fn();
+
+    QueenRun.create = jest.fn();
+    QueenRun.findOne = jest.fn();
+
+    GameResult.create = jest.fn();
   });
 
   describe("isValidPositions", () => {
