@@ -39,6 +39,7 @@ html.tower-of-hanoi-active {
   z-index: -1;
   width: 100vw;
   height: 100vh;
+  pointer-events: none;
 }
   
   /* Enhanced Header */
@@ -135,6 +136,7 @@ html.tower-of-hanoi-active {
     height: 200%;
     background: radial-gradient(circle, rgba(255,138,0,0.1) 0%, transparent 70%);
     animation: rotate 20s linear infinite;
+  pointer-events: none;
   }
   
   @keyframes rotate {
@@ -226,6 +228,38 @@ html.tower-of-hanoi-active {
     color: #FF8A00;
     min-width: 50px;
     text-align: center;
+  }
+
+  .disk-options {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+  }
+
+  .disk-option {
+    padding: 0.75rem 1.25rem;
+    border-radius: 12px;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    background: rgba(255, 255, 255, 0.05);
+    color: #FFFFFF;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 120px;
+    text-align: center;
+  }
+
+  .disk-option:hover:not(.selected) {
+    border-color: #FF8A00;
+    background: rgba(255, 138, 0, 0.1);
+  }
+
+  .disk-option.selected {
+    background: rgba(255, 138, 0, 0.2);
+    border-color: #FF8A00;
+    box-shadow: 0 0 20px rgba(255, 138, 0, 0.25);
+    color: #FFFFFF;
   }
   
   /* Peg Selector */

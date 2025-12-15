@@ -1,7 +1,9 @@
 // TowerOfHanoi.jsx - Enhanced Version
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import api from '../services/api.js';
 import ResultModal from "../components/ResultModal.jsx";
+import Leaderboard from "../components/Leaderboard.jsx";
+import { calculateMinMoves } from '../utils/hanoi.js';
 import './TowerOfHanoi.css';
 
 const TowerOfHanoi = ({ player, onBack }) => {
@@ -15,13 +17,16 @@ const TowerOfHanoi = ({ player, onBack }) => {
   const [solution, setSolution] = useState(null);
   const [result, setResult] = useState(null);
   const [showResult, setShowResult] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const [errors, setErrors] = useState({});
   const [currentMoveIndex, setCurrentMoveIndex] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
   const [disksPositions, setDisksPositions] = useState([]);
+  const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const gameBoardRef = useRef(null);
 
   const pegLabels = ['A', 'B', 'C', 'D'];
+  const minMoves = useMemo(() => calculateMinMoves(numDisks, numPegs), [numDisks, numPegs]);
 
   // Initialize disk positions
   useEffect(() => {
@@ -34,6 +39,10 @@ const TowerOfHanoi = ({ player, onBack }) => {
       document.body.classList.remove('tower-of-hanoi-active');
       document.documentElement.classList.remove('tower-of-hanoi-active');
     };
+  }, []);
+
+  useEffect(() => {
+    loadGame();
   }, []);
 
   useEffect(() => {
@@ -59,8 +68,10 @@ const TowerOfHanoi = ({ player, onBack }) => {
   const loadGame = async () => {
     try {
       const response = await api.get('/games/hanoi/generate');
-      const disks = response.data.data.numDisks || 5;
-      setNumDisks(Math.min(disks, 10)); // Limit to 10 for better visualization
+      const disks = Number(response.data?.data?.numDisks) || 5;
+      // Clamp to 5-10 range
+      const sanitizedDisks = Math.min(10, Math.max(5, disks));
+      setNumDisks(sanitizedDisks);
     } catch (error) {
       console.error('Error loading game:', error);
     }
@@ -71,6 +82,10 @@ const TowerOfHanoi = ({ player, onBack }) => {
     
     if (!numPegs || (numPegs !== 3 && numPegs !== 4)) {
       newErrors.numPegs = 'Please select number of pegs (3 or 4)';
+    }
+
+    if (!numDisks || numDisks < 5 || numDisks > 10) {
+      newErrors.numDisks = 'Number of disks must be between 5 and 10';
     }
     
     if (!userMoves || userMoves < 1) {
@@ -126,6 +141,7 @@ const TowerOfHanoi = ({ player, onBack }) => {
   const handleShowSolution = async () => {
     try {
       setLoading(true);
+      setIsAutoPlaying(false);
       const response = await api.post('/games/hanoi/solve', {
         numDisks,
         numPegs
@@ -151,8 +167,10 @@ const TowerOfHanoi = ({ player, onBack }) => {
     }
   };
 
-  const playNextMove = () => {
-    if (!solution?.sequence || currentMoveIndex >= solution.sequence.length || isAnimating) return;
+  const playNextMove = async () => {
+    if (!solution?.sequence || currentMoveIndex >= solution.sequence.length || isAnimating) {
+      return false;
+    }
     
     const move = solution.sequence[currentMoveIndex];
     const [fromPeg, toPeg] = move.split(' -> ');
@@ -166,19 +184,26 @@ const TowerOfHanoi = ({ player, onBack }) => {
     
     if (disksOnPeg.length > 0) {
       const diskToMove = disksOnPeg[0];
-      animateMove(fromIndex, toIndex, diskToMove.id);
+      await animateMove(fromIndex, toIndex, diskToMove.id);
+      setCurrentMoveIndex(prev => prev + 1);
+      return true;
     }
-    
-    setCurrentMoveIndex(prev => prev + 1);
+
+    return false;
   };
 
   const playAllMoves = async () => {
-    if (!solution?.sequence) return;
-    
+    if (!solution?.sequence || isAutoPlaying || isAnimating) return;
+
+    setIsAutoPlaying(true);
     for (let i = currentMoveIndex; i < solution.sequence.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      playNextMove();
+      // bail if user interrupted by closing solution panel
+      if (!showSolution) break;
+      const movePlayed = await playNextMove();
+      if (!movePlayed) break;
+      await new Promise(resolve => setTimeout(resolve, 250));
     }
+    setIsAutoPlaying(false);
   };
 
   const parseSequence = (sequenceString) => {
@@ -206,15 +231,22 @@ const TowerOfHanoi = ({ player, onBack }) => {
       return;
     }
 
+    const playerId = Number(player?.id ?? player?.playerId);
+    if (!playerId) {
+      alert('Player information is missing. Please sign in again.');
+      return;
+    }
+
     try {
       setLoading(true);
       const sequence = parseSequence(userSequence);
       
       const response = await api.post('/games/hanoi/submit', {
+        playerId,
         playerName: player?.name || 'Player',
         numDisks,
         numPegs,
-        userMoves: parseInt(userMoves),
+        userMoves: parseInt(userMoves, 10),
         userSequence: sequence
       });
       
@@ -222,8 +254,11 @@ const TowerOfHanoi = ({ player, onBack }) => {
       setShowResult(true);
     } catch (error) {
       console.error('Error submitting answer:', error);
-      if (error.response?.data?.message?.includes('Invalid sequence')) {
-        setErrors({ userSequence: error.response.data.message });
+      const serverMessage = error.response?.data?.message;
+      if (serverMessage?.includes('Invalid sequence')) {
+        setErrors({ userSequence: serverMessage });
+      } else if (serverMessage) {
+        alert(serverMessage);
       } else {
         alert('Error submitting answer. Please check your input.');
       }
@@ -235,6 +270,7 @@ const TowerOfHanoi = ({ player, onBack }) => {
   const handleNewGame = () => {
     setGameStarted(false);
     setShowSolution(false);
+    setIsAutoPlaying(false);
     setSolution(null);
     setResult(null);
     setShowResult(false);
@@ -248,6 +284,7 @@ const TowerOfHanoi = ({ player, onBack }) => {
   const handleCloseResult = () => {
     setShowResult(false);
     if (result?.isCorrect) {
+      setShowLeaderboard(true);
       handleNewGame();
     }
   };
@@ -286,26 +323,22 @@ const TowerOfHanoi = ({ player, onBack }) => {
 
             <div className="form-group">
               <label>🔢 Number of Disks</label>
-              <div className="disk-counter">
-                <button 
-                  className="counter-btn" 
-                  onClick={() => setNumDisks(Math.max(3, numDisks - 1))}
-                  disabled={numDisks <= 3}
-                >
-                  -
-                </button>
-                <span className="counter-value">{numDisks}</span>
-                <button 
-                  className="counter-btn" 
-                  onClick={() => setNumDisks(Math.min(10, numDisks + 1))}
-                  disabled={numDisks >= 10}
-                >
-                  +
-                </button>
+              <div className="disk-options">
+                {[5, 6, 7, 8, 9, 10].map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    className={`disk-option ${numDisks === option ? 'selected' : ''}`}
+                    onClick={() => setNumDisks(option)}
+                  >
+                    {option} Disks
+                  </button>
+                ))}
               </div>
               <p className="info-text">
-                (Each additional disk doubles the minimum moves!)
+                Default is 5 disks. You can choose between 5 and 10 disks.
               </p>
+              {errors.numDisks && <span className="error-text">{errors.numDisks}</span>}
             </div>
 
             <div className="form-group">
@@ -369,7 +402,7 @@ const TowerOfHanoi = ({ player, onBack }) => {
             </div>
             <div className="info-item">
               <span className="info-icon">⚡</span>
-              <strong>Min Moves:</strong> {Math.pow(2, numDisks) - 1}
+              <strong>Min Moves:</strong> {minMoves}
             </div>
           </div>
 
@@ -431,7 +464,7 @@ const TowerOfHanoi = ({ player, onBack }) => {
               </div>
               {errors.userMoves && <span className="error-text">{errors.userMoves}</span>}
               <p className="help-text">
-                Minimum moves for {numDisks} disks with {numPegs} pegs: {Math.pow(2, numDisks) - 1}
+                Minimum moves for {numDisks} disks with {numPegs} pegs: {minMoves}
               </p>
             </div>
 
@@ -486,16 +519,16 @@ const TowerOfHanoi = ({ player, onBack }) => {
                 <button 
                   className="btn btn-sm btn-secondary"
                   onClick={playNextMove}
-                  disabled={currentMoveIndex >= solution.sequence.length || isAnimating}
+                  disabled={currentMoveIndex >= solution.sequence.length || isAnimating || isAutoPlaying}
                 >
                   ▶️ Play Next Move
                 </button>
                 <button 
                   className="btn btn-sm btn-secondary"
                   onClick={playAllMoves}
-                  disabled={currentMoveIndex >= solution.sequence.length || isAnimating}
+                  disabled={currentMoveIndex >= solution.sequence.length || isAutoPlaying}
                 >
-                  ⏭️ Play All Moves
+                  {isAutoPlaying ? '⏸️ Playing...' : '⏭️ Play All Moves'}
                 </button>
                 <div className="move-counter">
                   Move: {currentMoveIndex} / {solution.sequence.length}
@@ -562,6 +595,13 @@ const TowerOfHanoi = ({ player, onBack }) => {
         <ResultModal 
           result={result} 
           onClose={handleCloseResult}
+        />
+      )}
+
+      {showLeaderboard && (
+        <Leaderboard 
+          gameType="hanoi" 
+          onClose={() => setShowLeaderboard(false)} 
         />
       )}
     </div>

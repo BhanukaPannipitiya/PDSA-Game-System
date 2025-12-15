@@ -1,6 +1,15 @@
 import React from 'react';
 
+const formatTime = (time) => (typeof time === 'number' ? `${time.toFixed(4)} ms` : 'N/A');
+
 const ResultModal = ({ result, onClose }) => {
+  const message = result?.message || (result?.isCorrect ? 'Great job!' : 'Please try again.');
+  const algorithmStats = result?.gameResult;
+  const showAlgorithmStats =
+    algorithmStats?.algorithm1Name &&
+    algorithmStats?.algorithm2Name &&
+    (typeof algorithmStats.algorithm1Time === 'number' || typeof algorithmStats.algorithm2Time === 'number');
+
   return (
     <div className="modal-overlay">
       <div className="modal-content">
@@ -19,7 +28,7 @@ const ResultModal = ({ result, onClose }) => {
         </div>
 
         <div className="result-body">
-          <p className="result-message">{result.message}</p>
+          <p className="result-message">{message}</p>
           
           <div className="result-details">
             <div className="detail-row">
@@ -30,15 +39,15 @@ const ResultModal = ({ result, onClose }) => {
               <span>Correct Moves:</span>
               <strong>{result.correctMoves}</strong>
             </div>
-            {result.gameResult && (
+            {showAlgorithmStats && (
               <>
                 <div className="detail-row">
-                  <span>{result.gameResult.algorithm1Name}:</span>
-                  <strong>{result.gameResult.algorithm1Time.toFixed(4)} ms</strong>
+                  <span>{algorithmStats.algorithm1Name}:</span>
+                  <strong>{formatTime(algorithmStats.algorithm1Time)}</strong>
                 </div>
                 <div className="detail-row">
-                  <span>{result.gameResult.algorithm2Name}:</span>
-                  <strong>{result.gameResult.algorithm2Time.toFixed(4)} ms</strong>
+                  <span>{algorithmStats.algorithm2Name}:</span>
+                  <strong>{formatTime(algorithmStats.algorithm2Time)}</strong>
                 </div>
               </>
             )}

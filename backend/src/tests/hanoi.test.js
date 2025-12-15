@@ -45,6 +45,18 @@ describe('Tower of Hanoi Algorithms', () => {
     expect(minMoves).toBe(31); // 2^5 - 1
   });
   
+  test('Recursive 3 Pegs - exact optimal sequence for 5 disks', () => {
+    const moves = recursive3Pegs(5, 'A', 'C', 'B');
+    const expected = [
+      'A -> C', 'A -> B', 'C -> B', 'A -> C', 'B -> A', 'B -> C', 'A -> C',
+      'A -> B', 'C -> B', 'C -> A', 'B -> A', 'C -> B', 'A -> C', 'A -> B',
+      'C -> B', 'A -> C', 'B -> A', 'B -> C', 'A -> C', 'B -> A', 'C -> B',
+      'C -> A', 'B -> A', 'B -> C', 'A -> C', 'A -> B', 'C -> B', 'A -> C',
+      'B -> A', 'B -> C', 'A -> C'
+    ];
+    expect(moves).toEqual(expected);
+  });
+
   test('Moves should start from source and end at destination', () => {
     const moves = recursive3Pegs(3, 'A', 'D', 'B');
     expect(moves[0]).toContain('A');

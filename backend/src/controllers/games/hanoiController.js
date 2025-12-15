@@ -117,11 +117,18 @@ exports.solveHanoi = async (req, res) => {
 // Submit user answer
 exports.submitAnswer = async (req, res) => {
   try {
-    const { playerId, playerName, numDisks, numPegs, userMoves, userSequence } =
-      req.body;
+    const {
+      playerId,
+      playerName,
+      numDisks,
+      numPegs,
+      userMoves,
+      userSequence,
+    } = req.body;
 
     // Validation
-    if (!playerId) {
+    const parsedPlayerId = Number(playerId);
+    if (!parsedPlayerId) {
       return res.status(400).json({
         success: false,
         message: "Player ID is required",
@@ -149,19 +156,31 @@ exports.submitAnswer = async (req, res) => {
       });
     }
 
-    if (!userMoves || userMoves < 1) {
+    const parsedUserMoves = Number(userMoves);
+    if (!parsedUserMoves || parsedUserMoves < 1) {
       return res.status(400).json({
         success: false,
         message: "Invalid number of moves",
       });
     }
 
-    if (!userSequence || !Array.isArray(userSequence)) {
+    if (
+      !userSequence ||
+      !Array.isArray(userSequence) ||
+      userSequence.length === 0
+    ) {
       return res.status(400).json({
         success: false,
         message: "Invalid move sequence",
       });
     }
+
+    const normalizedUserSequence = userSequence.map((move) =>
+      String(move)
+        .trim()
+        .toUpperCase()
+        .replace(/\s*-\s*>/g, " -> ")
+    );
 
     // Get correct solution
     let correctSequence, time1, time2, algo1Name, algo2Name;
@@ -194,12 +213,12 @@ exports.submitAnswer = async (req, res) => {
 
     const correctMoves = correctSequence.length;
     const isCorrect =
-      userMoves === correctMoves &&
-      JSON.stringify(userSequence) === JSON.stringify(correctSequence);
+      parsedUserMoves === correctMoves &&
+      JSON.stringify(normalizedUserSequence) === JSON.stringify(correctSequence);
 
     // Create game round
     const gameRound = await GameRound.create({
-      playerId,
+      playerId: parsedPlayerId,
       playerName: playerName.trim(),
       gameType: "hanoi",
       gameConfig: {
@@ -240,10 +259,10 @@ exports.submitAnswer = async (req, res) => {
     // Save player submission
     const playerSubmission = await PlayerSubmission.create({
       gameRoundId: gameRound.id,
-      playerId,
+      playerId: parsedPlayerId,
       playerAnswer: {
-        userMoves,
-        userSequence,
+        userMoves: parsedUserMoves,
+        userSequence: normalizedUserSequence,
       },
       isCorrect,
       score: isCorrect ? 1 : 0,
@@ -258,12 +277,16 @@ exports.submitAnswer = async (req, res) => {
       data: {
         isCorrect,
         correctMoves,
-        userMoves,
+        userMoves: parsedUserMoves,
         message: isCorrect ? "Correct answer!" : "Incorrect answer. Try again!",
         gameResult: {
           id: playerSubmission.id,
           isCorrect,
           score: playerSubmission.score,
+          algorithm1Name: algo1Name,
+          algorithm1Time: time1,
+          algorithm2Name: algo2Name,
+          algorithm2Time: time2,
         },
       },
     });
